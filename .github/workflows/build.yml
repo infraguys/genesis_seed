@@ -1,0 +1,19 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  Build:
+    runs-on: self-hosted
+    strategy:
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install build dependencies
+        run: sudo apt update && sudo apt install --yes build-essential
+      - name: Build Linux Kernel
+        run: |
+          make kernel
+
