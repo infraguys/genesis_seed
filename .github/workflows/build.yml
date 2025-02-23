@@ -11,9 +11,7 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@v3
-      - name: Install build dependencies
-        run: sudo apt update && sudo apt install --yes build-essential
-      - name: Build Linux Kernel
+      - name: Build Linux Kernel on Self-Hosted runner
         run: |
           make kernel
 
