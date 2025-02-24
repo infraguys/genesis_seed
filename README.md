@@ -1,3 +1,5 @@
+![Build workflow](https://github.com/infraguys/genesis_seed/actions/workflows/build.yml/badge.svg)
+
 # Genesis Seed
 
 Tiny Linux based OS for probing, discovering and provisioning new nodes.
