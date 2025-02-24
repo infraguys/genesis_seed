@@ -11,7 +11,7 @@ jobs:
       fail-fast: true
     steps:
       - uses: actions/checkout@v3
-      - name: Build Linux Kernel on Self-Hosted runner
+      - name: Build binaries(Kernel, Busybox, Python, Initrd) on Self-Hosted runner
         run: |
-          make kernel
+          make clean && make
 
