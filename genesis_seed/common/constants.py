@@ -1,8 +1,6 @@
-#!/bin/sh
-
-# Copyright 2025 Genesis Corporation
+#    Copyright 2025 Genesis Corporation.
 #
-# All Rights Reserved.
+#    All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,17 +13,18 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import os
+import uuid as sys_uuid
 
-mount -t proc      proc      /proc
-mount -t sysfs     sysfs     /sys
-mount -t tmpfs     tmpfs     /tmp
-mount -t devtmpfs  devtmpfs  /dev
 
-export PYTHONHOME=/
-export PYTHON_VER="3.10"
-export PYTHONPATH="$PYTHONPATH:/lib/:/lib/python$PYTHON_VER/site-packages/genesis_seed"
-export SEED_OS_AGENT="/lib/python$PYTHON_VER/site-packages/genesis_seed/genesis_seed/cmd/agent.py"
+GLOBAL_SERVICE_NAME = "genesis_seed"
+SERVICE_PROJECT_ID = sys_uuid.UUID("00000000-0000-0000-0000-000000000000")
 
-echo "GENESIS SEED OS !!!"
-python3 $SEED_OS_AGENT
-sh
+WORK_DIR = "/var/lib/genesis"
+NODE_UUID_PATH = os.path.join(WORK_DIR, "node-id")
+
+CHUNK_SIZE = 16 << 20  # 16Mb
+
+KERNEL_CMDLINE_PATH = "/proc/cmdline"
+GC_CMDLINE_DEF_PREFIX = "gc_"
+GC_CMDLINE_KEY_BASE_URL = f"{GC_CMDLINE_DEF_PREFIX}base_url"

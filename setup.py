@@ -1,8 +1,6 @@
-#!/bin/sh
-
-# Copyright 2025 Genesis Corporation
+#    Copyright 2025 Genesis Corporation.
 #
-# All Rights Reserved.
+#    All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,16 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-mount -t proc      proc      /proc
-mount -t sysfs     sysfs     /sys
-mount -t tmpfs     tmpfs     /tmp
-mount -t devtmpfs  devtmpfs  /dev
+import setuptools
 
-export PYTHONHOME=/
-export PYTHON_VER="3.10"
-export PYTHONPATH="$PYTHONPATH:/lib/:/lib/python$PYTHON_VER/site-packages/genesis_seed"
-export SEED_OS_AGENT="/lib/python$PYTHON_VER/site-packages/genesis_seed/genesis_seed/cmd/agent.py"
 
-echo "GENESIS SEED OS !!!"
-python3 $SEED_OS_AGENT
-sh
+setuptools.setup(setup_requires=["pbr"], pbr=True, include_package_data=True)
