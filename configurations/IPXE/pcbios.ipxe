@@ -1,0 +1,8 @@
+#!ipxe
+
+:start
+
+dhcp 
+
+echo Get configuration from netboot server http://${next-server}:11010
+chain --autofree --replace http://${next-server}:11010/v1/boots/${uuid} || goto start

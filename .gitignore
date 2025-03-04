@@ -168,4 +168,5 @@ Python-*
 vmlinuz
 busybox
 initrd.img
-initrd/*
+initrd/
+ipxe/
