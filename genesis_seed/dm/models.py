@@ -57,6 +57,7 @@ class Machine(SimpleViewMixin):
     firmware_uuid: sys_uuid.UUID | None = None
     name: str = ""
     description: str = ""
+    image: str | None = None
 
 
 @dataclasses.dataclass

@@ -54,7 +54,9 @@ class SeedOSAgentService(basic.BasicService):
         if self._is_ready():
             return
 
-        machines = self._user_api.machines.filter(firmware_uuid=str(self._system_uuid))
+        machines = self._user_api.machines.filter(
+            firmware_uuid=str(self._system_uuid)
+        )
 
         # The auto discovery feature is not yet implemented
         # It will be added in the future
@@ -98,14 +100,14 @@ class SeedOSAgentService(basic.BasicService):
         )
         LOG.warning("Flashing progress: 100%")
 
+        utils.flush_disk(DEFAULT_BLOCK_DEVICE)
+
         self._user_api.machines.update(
             machine.uuid,
             boot="hd0",
             status="ACTIVE",
+            image=node.image,
         )
-
-        utils.flush_disk(DEFAULT_BLOCK_DEVICE)
-
         self._user_api.nodes.update(node.uuid, status="ACTIVE")
 
         self._mark_ready()
