@@ -67,7 +67,9 @@ class HttpClient:
                 data = json.dumps(data).encode("utf-8")
                 headers["Content-Type"] = JSON_CONTENT_TYPE
 
-        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        req = urllib.request.Request(
+            url, data=data, headers=headers, method=method
+        )
         with urllib.request.urlopen(req, timeout=self._timeout) as response:
             return HttpResp(
                 resp_code=response.status,
@@ -101,7 +103,9 @@ class HttpClient:
     ) -> HttpResp:
         return self._request("PUT", url, data=data, headers=headers)
 
-    def delete(self, url: str, headers: tp.Dict[str, tp.Any] | None = None) -> HttpResp:
+    def delete(
+        self, url: str, headers: tp.Dict[str, tp.Any] | None = None
+    ) -> HttpResp:
         return self._request("DELETE", url, headers=headers)
 
 
