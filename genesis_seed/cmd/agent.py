@@ -34,9 +34,9 @@ def main():
         )
 
     log.warning("GC endpoint: %s", cfg[c.GC_CMDLINE_KEY_BASE_URL])
-    api = clients.UserAPI(cfg[c.GC_CMDLINE_KEY_BASE_URL])
+    api = clients.OrchAPI(cfg[c.GC_CMDLINE_KEY_BASE_URL])
 
-    service = SeedOSAgentService(user_api=api, iter_min_period=3)
+    service = SeedOSAgentService(orch_api=api, iter_min_period=3)
 
     service.start()
 

@@ -24,3 +24,7 @@ class GSException(Exception):
 
     def __repr__(self):
         return "%s: %s" % (type(self), self.msg)
+
+
+class NoAcceptableBlockDevice(GSException):
+    message = "No acceptable block device found."
