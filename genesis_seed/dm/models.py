@@ -40,8 +40,9 @@ class SimpleViewMixin:
         for field in dataclasses.fields(cls):
             match field.type:
                 case datetime.datetime():
-                    kwargs[field.name] = datetime.datetime.fromisoformat(
-                        kwargs[field.name]
+                    kwargs[field.name] = datetime.datetime.strptime(
+                        kwargs[field.name],
+                        c.DEFAULT_DATETIME_FORMAT,
                     )
                 case sys_uuid.UUID():
                     kwargs[field.name] = sys_uuid.UUID(kwargs[field.name])
@@ -77,7 +78,7 @@ class SimpleViewMixin:
                 case SimpleViewMixin():
                     view[k] = v.dump_to_simple_view()
                 case datetime.datetime():
-                    view[k] = v.isoformat()
+                    view[k] = v.strftime(c.DEFAULT_DATETIME_FORMAT)
                 case ipaddress.IPv4Address():
                     view[k] = str(v)
                 case sys_uuid.UUID():
@@ -208,7 +209,7 @@ class Payload(SimpleViewMixin):
     payload_updated_at: str = dataclasses.field(
         default_factory=lambda: datetime.datetime(
             1970, 1, 1, 0, 1, tzinfo=datetime.timezone.utc
-        ).isoformat()
+        ).strftime(c.DEFAULT_DATETIME_FORMAT)
     )
 
     @classmethod
@@ -275,7 +276,11 @@ class Payload(SimpleViewMixin):
                 for iface in self.interfaces
             ]
 
-        m.update(json.dumps(data, separators=(",", ":")).encode("utf-8"))
+        m.update(
+            json.dumps(data, separators=(",", ":"), sort_keys=True).encode(
+                "utf-8"
+            )
+        )
         return m.hexdigest()
 
     def update_payload_hash(self):
