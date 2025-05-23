@@ -147,10 +147,8 @@ build_initrd:
 	mkdir ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}
 	cp -r ${PYTHON_PKG_NAME} ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}/
 	cd ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}/ && \
-		rm -fr ${PYTHON_PKG_NAME}/__pycache__ && \
-		rm -fr ${PYTHON_PKG_NAME}/cmd/__pycache__ \
-		rm -fr ${PYTHON_PKG_NAME}/common/__pycache__ \
-		rm -fr ${PYTHON_PKG_NAME}/services/__pycache__
+		find . -name '*.py[co]' -delete && \
+		find . -name __pycache__ -type d | xargs rm -rf
 
 # Build initramfs
 	cd ${RAMDISK_DIR} && \
