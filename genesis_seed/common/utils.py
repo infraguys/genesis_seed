@@ -13,6 +13,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import os
 import typing as tp
 import uuid as sys_uuid
 import subprocess
@@ -70,3 +71,7 @@ def cfg_from_cmdline(
         cfg[key] = value
 
     return cfg
+
+
+def real_path(path: str, mount: str = c.MNT_PATH) -> str:
+    return os.path.join(mount, path)

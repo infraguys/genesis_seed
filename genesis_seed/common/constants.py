@@ -23,6 +23,11 @@ SERVICE_PROJECT_ID = sys_uuid.UUID("00000000-0000-0000-0000-000000000000")
 DEFAULT_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 WORK_DIR = "/var/lib/genesis"
+PAYLOAD_PATH = "/seed-agent-payload.json"
+CORE_AGENT_PAYLOAD_PATH = "/var/lib/genesis/core-agent/payload.json"
+CORE_AGENT_CFG_PATH = "/etc/genesis_core_agent/genesis_core_agent.conf"
+MNT_PATH = "/mnt"
+
 NODE_UUID_PATH = os.path.join(WORK_DIR, "node-id")
 
 CHUNK_SIZE = 16 << 20  # 16Mb

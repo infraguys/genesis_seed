@@ -89,6 +89,7 @@ class SimpleViewMixin:
 
 @dataclasses.dataclass
 class Interface(SimpleViewMixin):
+    uuid: sys_uuid.UUID
     name: str
     mac: str
     ipv4: ipaddress.IPv4Address
@@ -111,12 +112,15 @@ class Interface(SimpleViewMixin):
     @classmethod
     def from_system(cls) -> tp.List["Interface"]:
         ifaces = []
+        system_uuid = system.system_uuid()
         for iface in system.get_ifaces():
             # TODO(akremenetsky): Support multiple IPv4 addresses for an interface
+            uuid = sys_uuid.uuid5(system_uuid, iface["mac"])
             ipv4 = next(iter(iface["ipv4_addresses"]), None)
             mask = next(iter(iface["masks"]), None)
             ifaces.append(
                 cls(
+                    uuid=uuid,
                     name=iface["name"],
                     mac=iface["mac"],
                     ipv4=ipv4,
@@ -227,9 +231,9 @@ class Payload(SimpleViewMixin):
 
     def __hash__(self) -> int:
         if self.payload_hash:
-            return hash(self.payload_hash)
+            return hash((self.payload_hash, self.payload_updated_at))
 
-        return hash(self._calculate_payload_hash())
+        return hash((self._calculate_payload_hash(), self.payload_updated_at))
 
     def dump_to_simple_view(self):
         view = super().dump_to_simple_view()
@@ -303,7 +307,6 @@ class Payload(SimpleViewMixin):
 
 @dataclasses.dataclass
 class CoreAgent(SimpleViewMixin):
-    PAYLOAD_PATH = "/seed-agent-payload.json"
 
     uuid: sys_uuid.UUID
     # payload_updated_at: str
@@ -326,34 +329,27 @@ class CoreAgent(SimpleViewMixin):
         )
 
     @classmethod
-    def collect_payload(cls) -> Payload:
+    def collect_payload(cls, payload_path: str = c.PAYLOAD_PATH) -> Payload:
         """Collect payload from the data plane."""
-        # TODO(akremenetsky): The simplest implementation is to keep some
-        # values into a file. This should be reworked in the future.
-        # The values should be collected from the data plane.
-        if not os.path.exists(cls.PAYLOAD_PATH):
-            empty = cls.empty_payload()
-            with open(cls.PAYLOAD_PATH, "w") as f:
-                json.dump(empty.dump_to_simple_view(), f, indent=2)
-            empty.update_payload_hash()
-            return empty
+        if not os.path.exists(payload_path):
+            payload: Payload = cls.empty_payload()
+        else:
+            # Load base from the payload file
+            with open(payload_path) as f:
+                payload_data = json.load(f)
+                payload: Payload = Payload.restore_from_simple_view(
+                    **payload_data
+                )
 
-        with open(cls.PAYLOAD_PATH) as f:
-            payload_data = json.load(f)
-            payload: Payload = Payload.restore_from_simple_view(**payload_data)
-
-        interfaces = Interface.from_system()
-        payload.interfaces = interfaces
-
+        payload.interfaces = Interface.from_system()
         payload.update_payload_hash()
         return payload
 
     @classmethod
-    def save_payload(cls, payload: Payload) -> None:
+    def save_payload(
+        cls, payload: Payload, payload_path: str = c.PAYLOAD_PATH
+    ) -> None:
         """Collect payload from the data plane."""
-        # TODO(akremenetsky): The simplest implementation is to keep some
-        # values into a file. This should be reworked in the future.
-        # The values should be collected from the data plane.
-        with open(cls.PAYLOAD_PATH, "w") as f:
+        with open(payload_path, "w") as f:
             payload_data = payload.dump_to_simple_view()
             json.dump(payload_data, f, indent=2)

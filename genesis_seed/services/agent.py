@@ -17,6 +17,7 @@
 import os
 import logging
 import subprocess
+import configparser
 import uuid as sys_uuid
 
 from genesis_seed.dm import models
@@ -158,6 +159,33 @@ class SeedOSAgentService(basic.BasicService):
             ):
                 machine_client.interfaces.update(iface.uuid, iface)
 
+    def _configure_core_agent(self) -> None:
+        cfg_path = utils.real_path(c.CORE_AGENT_CFG_PATH)
+
+        # Mount FS
+
+        if not os.path.exists(cfg_path):
+            LOG.debug(
+                "Image without core agent, skip agent configuration part."
+            )
+            # TODO(a.kremenetsky): Unmount FS
+            return
+
+        # Configure core agent, set orch correct orch endpoint
+        config = configparser.ConfigParser()
+        config.read(cfg_path)
+        config["core_agent"]["orch_endpoint"] = self._orch_api.orch_endpoint
+
+        # Dump configuration to the disk
+        with open(cfg_path) as f:
+            config.write(f)
+        LOG.info(
+            "The core agent has been configured to %s endpoint",
+            self._orch_api.orch_endpoint,
+        )
+
+        # Unmount FS
+
     def _place_node(
         self, cp_payload: models.Payload, dp_payload: models.Payload
     ) -> None:
@@ -205,6 +233,14 @@ class SeedOSAgentService(basic.BasicService):
 
         utils.flush_disk(block_device["path"])
 
+        # FIXME(a.kremenetsky): For cases if there is the core agent in the
+        # image we need to set a correct orch endpoint for it. This
+        # functionality may dropped in the future when private DNS feature
+        # will be added to Genesis.
+        self._configure_core_agent()
+
+        # TODO(a.kremenetsky): The ACTIVE status should be set by the
+        # core agent.
         # Finish the flashing process, make machine and nodes as active
         self._orch_api.machines.update(
             machine.uuid,

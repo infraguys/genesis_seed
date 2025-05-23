@@ -201,9 +201,14 @@ class CoreAgentsClient(CollectionBaseModelClient):
 
 class OrchAPI:
     def __init__(self, base_url: str):
+        self._base_url = base_url
         self._machines_client = MachinesClient(base_url)
         self._nodes_client = NodesClient(base_url)
         self._agents_client = CoreAgentsClient(base_url)
+
+    @property
+    def orch_endpoint(self) -> str:
+        return self._base_url
 
     @property
     def machines(self):

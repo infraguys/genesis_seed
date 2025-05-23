@@ -64,6 +64,7 @@ def interface_data():
         "ipv4": "192.168.1.1",
         "mask": "255.255.255.0",
         "mtu": 1500,
+        "uuid": sys_uuid.uuid4(),
     }
 
 
