@@ -85,13 +85,21 @@ class SeedOSAgentService(basic.BasicService):
         self._user_api.machines.update(machine.uuid, status="IN_PROGRESS")
         self._user_api.nodes.update(node.uuid, status="IN_PROGRESS")
 
-        def handler(total: int, written: int, chunk: bytes):
+        def handler(total: int, read: int, written: int, chunk: bytes):
             nonlocal progress
-
-            current_progress = int((written / total) * 100)
+            if total == 0:
+                LOG.warning(
+                    "Flashing progress: %d MiB written", written / 1024**2
+                )
+                return
+            current_progress = int((read / total) * 100)
             if current_progress > progress:
                 progress = current_progress
-                LOG.warning("Flashing progress: %d%%", progress)
+                LOG.warning(
+                    "Flashing progress: %d%%, %d MiB written",
+                    progress,
+                    written / 1024**2,
+                )
 
         http.stream_to_file(
             source_url=node.image,

@@ -16,12 +16,16 @@
 from __future__ import annotations
 
 import json
+import logging
 import urllib.request
 import urllib.parse
 import typing as tp
+import zlib
 
 from genesis_seed.common import exceptions
 from genesis_seed.common import constants as c
+
+LOG = logging.getLogger(__name__)
 
 HttpMethodType = tp.Literal["GET", "POST", "PUT", "DELETE"]
 JSON_CONTENT_TYPE = "application/json"
@@ -33,6 +37,13 @@ class HttpError(exceptions.GSException):
 
 class DownloadMismatchError(exceptions.GSException):
     message = "Downloaded mismatch. Expected: %(expected)s, got: %(got)s"
+
+
+class DownloadDecompressError(exceptions.GSException):
+    message = (
+        "EOF not found while decompressing, broken original archive "
+        "or download error."
+    )
 
 
 class HttpResp:
@@ -109,6 +120,61 @@ class HttpClient:
         return self._request("DELETE", url, headers=headers)
 
 
+class BaseChunkHandler:
+    def __init__(self, content_length: int) -> None:
+        self.in_bytes = 0
+        self.out_bytes = 0
+
+        self.content_length = content_length
+
+    def handle_chunk(self, chunk: bytes, out_file: tp.BinaryIO) -> int:
+        return 0
+
+    def is_clean(self):
+        if not self.content_length == self.in_bytes:
+            raise DownloadMismatchError(
+                expected=self.content_length, got=self.written
+            )
+
+
+class PlainChunkHandler(BaseChunkHandler):
+    def handle_chunk(self, chunk: bytes, out_file: tp.BinaryIO) -> int:
+        out_file.write(chunk)
+        written = len(chunk)
+        self.in_bytes += written
+        self.out_bytes += written
+        return written
+
+
+class GZChunkHandler(BaseChunkHandler):
+    def __init__(self, content_length: int, chunk_size: int):
+        self.chunk_size = chunk_size
+        # Set appropriate wbits to support gzip
+        self.d = zlib.decompressobj(wbits=15 + 32)
+        super().__init__(content_length=content_length)
+
+    def handle_chunk(self, chunk: bytes, out_file: tp.BinaryIO) -> int:
+        self.in_bytes += len(chunk)
+        tail = chunk
+        written = 0
+        while True:
+            # there may be many zeroes, so decompress in chunks
+            raw_chunk = self.d.decompress(tail, max_length=self.chunk_size)
+            if not raw_chunk:
+                break
+            tail = self.d.unconsumed_tail
+            out_file.write(raw_chunk)
+            written += len(raw_chunk)
+
+        self.out_bytes += written
+        return written
+
+    def is_clean(self):
+        if not self.d.eof:
+            raise DownloadDecompressError()
+        super().is_clean()
+
+
 def stream_to_file(
     source_url: str,
     destination_path: str,
@@ -129,22 +195,36 @@ def stream_to_file(
     :raises DownloadMismatchError: If the total amount of data written to disk
         does not match the content length in the HTTP response headers
     """
-    written = 0
+    read = written = 0
 
-    with urllib.request.urlopen(source_url) as response:
-        content_length = int(response.headers["Content-Length"])
+    req = urllib.request.Request(source_url)
+    # It's absurd to compress already compressed file
+    if not source_url.endswith(".gz"):
+        req.add_header("Accept-Encoding", "gzip")
+    with urllib.request.urlopen(req) as response:
+        content_length = int(response.headers.get("Content-Length", 0))
+        is_gzipped = response.headers.get(
+            "Content-Encoding"
+        ) == "gzip" or source_url.endswith(".gz")
+
+        if is_gzipped:
+            LOG.warning(
+                "Got gzipped stream/file, progress will be innacurate..."
+            )
+            chunker = GZChunkHandler(content_length, chunk_size=chunk_size)
+        else:
+            chunker = PlainChunkHandler(content_length)
 
         with open(destination_path, "wb") as file:
             while True:
                 chunk = response.read(chunk_size)
+                read += len(chunk)
+                written += chunker.handle_chunk(chunk, file)
+
                 if not chunk:
                     break
 
-                file.write(chunk)
-                written += len(chunk)
-
                 if chunk_handler is not None:
-                    chunk_handler(content_length, written, chunk)
+                    chunk_handler(content_length, read, written, chunk)
 
-    if content_length != written:
-        raise DownloadMismatchError(expected=content_length, got=written)
+    chunker.is_clean()
