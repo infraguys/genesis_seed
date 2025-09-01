@@ -14,13 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import unittest
 
-class GSException(Exception):
-    message = "An unknown exception occurred."
 
-    def __init__(self, **kwargs):
-        self.msg = self.message % kwargs
-        super(GSException, self).__init__(self.msg)
-
-    def __repr__(self):
-        return "%s: %s" % (type(self), self.msg)
+class SimpleTest(unittest.TestCase):
+    def test_ok(self):
+        self.assertFalse(False)

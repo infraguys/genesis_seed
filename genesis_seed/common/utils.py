@@ -25,6 +25,12 @@ def node_uuid(path: str = c.NODE_UUID_PATH) -> sys_uuid.UUID:
         return sys_uuid.UUID(f.read().strip())
 
 
+def system_uuid() -> sys_uuid.UUID:
+    """Return system uuid"""
+    with open("/sys/class/dmi/id/product_uuid") as f:
+        return sys_uuid.UUID(f.read().strip())
+
+
 def flush_disk(device: str) -> None:
     _FLUSH_CMD = """fdisk "{device}" <<EOF
 w
