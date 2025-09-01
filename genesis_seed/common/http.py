@@ -18,7 +18,6 @@ from __future__ import annotations
 import json
 import urllib.request
 import urllib.parse
-import urllib.error as urllib_error
 import typing as tp
 
 from genesis_seed.common import exceptions
@@ -29,23 +28,7 @@ JSON_CONTENT_TYPE = "application/json"
 
 
 class HttpError(exceptions.GSException):
-    resp_code = 500
     message = "Http Error: %(http_err)s"
-
-    def __init__(self, resp_code: int | None = None, **kwargs):
-        super().__init__(**kwargs)
-        if resp_code is not None:
-            self.resp_code = resp_code
-
-
-class HttpNotFoundError(HttpError):
-    resp_code = 404
-    message = "Resource not found: %(resource)s"
-
-
-class HttpConflictError(HttpError):
-    resp_code = 409
-    message = "Resource conflict: %(resource)s"
 
 
 class DownloadMismatchError(exceptions.GSException):
@@ -62,21 +45,7 @@ class HttpResp:
         if self.content_type == JSON_CONTENT_TYPE:
             return json.loads(self.text.decode("utf-8"))
 
-        raise HttpError(
-            http_err="Invalid content type", resp_code=self.resp_code
-        )
-
-    def raise_for_status(self) -> None:
-        if self.resp_code < 400:
-            return
-
-        if self.resp_code == 404:
-            raise HttpNotFoundError(resource=self.text.decode("utf-8"))
-
-        if self.resp_code == 409:
-            raise HttpConflictError(resource=self.text.decode("utf-8"))
-
-        raise HttpError(http_err=self.text, resp_code=self.resp_code)
+        raise HttpError(http_err="Invalid content type")
 
 
 class HttpClient:
@@ -101,34 +70,22 @@ class HttpClient:
         req = urllib.request.Request(
             url, data=data, headers=headers, method=method
         )
-        try:
-            with urllib.request.urlopen(
-                req, timeout=self._timeout
-            ) as response:
-                return HttpResp(
-                    resp_code=response.status,
-                    text=response.read(),
-                    content_type=response.getheader("Content-Type"),
-                )
-        except urllib_error.HTTPError as e:
-            match e.code:
-                case 404:
-                    raise HttpNotFoundError(resource=url)
-                case 409:
-                    raise HttpConflictError(resource=url)
-                case _:
-                    raise HttpError(http_err=str(e), resp_code=e.code)
+        with urllib.request.urlopen(req, timeout=self._timeout) as response:
+            return HttpResp(
+                resp_code=response.status,
+                text=response.read(),
+                content_type=response.getheader("Content-Type"),
+            )
 
     def get(
         self,
         url: str,
         params: tp.Optional[tp.Dict[str, tp.Any]] = None,
         headers: tp.Dict[str, tp.Any] | None = None,
-        data: tp.Dict[str, tp.Any] | None = None,
     ) -> HttpResp:
         if params:
             url += "?" + urllib.parse.urlencode(params)
-        return self._request("GET", url, headers=headers, data=data)
+        return self._request("GET", url, headers=headers)
 
     def post(
         self,

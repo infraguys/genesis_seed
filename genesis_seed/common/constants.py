@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import os
-import enum
 import uuid as sys_uuid
 
 
@@ -25,45 +24,7 @@ WORK_DIR = "/var/lib/genesis"
 NODE_UUID_PATH = os.path.join(WORK_DIR, "node-id")
 
 CHUNK_SIZE = 16 << 20  # 16Mb
-MINIMAL_BLOCK_DEVICE_SIZE_GB = 5
 
 KERNEL_CMDLINE_PATH = "/proc/cmdline"
 GC_CMDLINE_DEF_PREFIX = "gc_"
 GC_CMDLINE_KEY_BASE_URL = f"{GC_CMDLINE_DEF_PREFIX}base_url"
-
-
-class MachineStatus(str, enum.Enum):
-    NEW = "NEW"
-    SCHEDULED = "SCHEDULED"
-    IN_PROGRESS = "IN_PROGRESS"
-    STARTED = "STARTED"
-    ACTIVE = "ACTIVE"
-    IDLE = "IDLE"
-    ERROR = "ERROR"
-
-
-class NodeStatus(str, enum.Enum):
-    NEW = "NEW"
-    SCHEDULED = "SCHEDULED"
-    IN_PROGRESS = "IN_PROGRESS"
-    STARTED = "STARTED"
-    ACTIVE = "ACTIVE"
-    ERROR = "ERROR"
-
-
-class MachineType(str, enum.Enum):
-    VM = "VM"
-    HW = "HW"
-
-
-class BootAlternative(str, enum.Enum):
-    hd0 = "hd0"
-    hd1 = "hd1"
-    hd2 = "hd2"
-    hd3 = "hd3"
-    hd4 = "hd4"
-    hd5 = "hd5"
-    hd6 = "hd6"
-    hd7 = "hd7"
-    cdrom = "cdrom"
-    network = "network"

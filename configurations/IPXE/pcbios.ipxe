@@ -2,7 +2,7 @@
 
 :start
 
-dhcp || goto start
+dhcp 
 
 echo Get configuration from netboot server http://${next-server}:11011
 chain --autofree --replace http://${next-server}:11011/v1/boots/${uuid} || goto start
