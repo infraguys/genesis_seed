@@ -26,6 +26,19 @@ export PYTHON_VER="3.10"
 export PYTHONPATH="$PYTHONPATH:/lib/:/lib/python$PYTHON_VER/site-packages/genesis_seed"
 export SEED_OS_AGENT="/lib/python$PYTHON_VER/site-packages/genesis_seed/genesis_seed/cmd/agent.py"
 
+
+# Check available interfaces and bring them up
+for iface_path in /sys/class/net/eth*; do
+    # The glob returns the pattern itself if no files match.
+    # This check ensures we only proceed if an interface was actually found.
+    if [ ! -e "$iface_path" ]; then
+        continue
+    fi
+    iface=$(basename "$iface_path")
+    ifconfig "$iface" up
+    udhcpc -i "$iface" -n -s /bin/ifup.sh
+done
+
 echo "GENESIS SEED OS !!!"
 python3 $SEED_OS_AGENT
 sh

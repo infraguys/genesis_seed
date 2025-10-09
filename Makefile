@@ -138,7 +138,9 @@ build_initrd:
 	cd ${RAMDISK_DIR} && \
 		mkdir dev etc proc sys tmp lib mnt var bin
 	cp init ${RAMDISK_DIR}/init
+	cp bin/ifup.sh ${RAMDISK_DIR}/bin/
 	chmod +x ${RAMDISK_DIR}/init
+	chmod +x ${RAMDISK_DIR}/bin/ifup.sh
 	./busybox --install ${RAMDISK_DIR}/bin
 # Install Python
 	cp -r ${PYTHON_OUTPUT_DIR}/lib/* ${RAMDISK_DIR}/lib/
@@ -147,10 +149,8 @@ build_initrd:
 	mkdir ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}
 	cp -r ${PYTHON_PKG_NAME} ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}/
 	cd ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}/ && \
-		rm -fr ${PYTHON_PKG_NAME}/__pycache__ && \
-		rm -fr ${PYTHON_PKG_NAME}/cmd/__pycache__ \
-		rm -fr ${PYTHON_PKG_NAME}/common/__pycache__ \
-		rm -fr ${PYTHON_PKG_NAME}/services/__pycache__
+		find . -name '*.py[co]' -delete && \
+		find . -name __pycache__ -type d -exec rm -rf {} +
 
 # Build initramfs
 	cd ${RAMDISK_DIR} && \
