@@ -16,8 +16,8 @@
 
 import logging
 
-from genesis_seed.common import clients
 from genesis_seed.common import utils
+from genesis_seed.common.orch import core
 from genesis_seed.common import constants as c
 from genesis_seed.services.agent import SeedOSAgentService
 
@@ -28,15 +28,26 @@ def main():
     # Load configuration from the Kernel command line
     cfg = utils.cfg_from_cmdline()
 
-    if c.GC_CMDLINE_KEY_BASE_URL not in cfg:
-        ValueError(
-            f"Missing {c.GC_CMDLINE_KEY_BASE_URL} parameter in kernel command line"
+    if c.GC_CMDLINE_KEY_ORCH_API not in cfg:
+        raise ValueError(
+            f"Missing {c.GC_CMDLINE_KEY_ORCH_API} parameter "
+            "in kernel command line"
         )
 
-    log.warning("GC endpoint: %s", cfg[c.GC_CMDLINE_KEY_BASE_URL])
-    api = clients.UserAPI(cfg[c.GC_CMDLINE_KEY_BASE_URL])
+    if c.GC_CMDLINE_KEY_STATUS_API not in cfg:
+        raise ValueError(
+            f"Missing {c.GC_CMDLINE_KEY_STATUS_API} parameter "
+            "in kernel command line"
+        )
 
-    service = SeedOSAgentService(user_api=api, iter_min_period=3)
+    log.warning("GC Orch endpoint: %s", cfg[c.GC_CMDLINE_KEY_ORCH_API])
+    log.warning("GC Status endpoint: %s", cfg[c.GC_CMDLINE_KEY_STATUS_API])
+    core_client = core.CoreClient(
+        orch_endpoint=cfg[c.GC_CMDLINE_KEY_ORCH_API],
+        status_endpoint=cfg[c.GC_CMDLINE_KEY_STATUS_API],
+    )
+
+    service = SeedOSAgentService(core_client=core_client, iter_min_period=3)
 
     service.start()
 

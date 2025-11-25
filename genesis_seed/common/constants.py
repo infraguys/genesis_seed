@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import os
+import enum
 import uuid as sys_uuid
 
 
@@ -27,4 +28,20 @@ CHUNK_SIZE = 16 << 20  # 16Mb
 
 KERNEL_CMDLINE_PATH = "/proc/cmdline"
 GC_CMDLINE_DEF_PREFIX = "gc_"
-GC_CMDLINE_KEY_BASE_URL = f"{GC_CMDLINE_DEF_PREFIX}base_url"
+GC_CMDLINE_KEY_ORCH_API = f"{GC_CMDLINE_DEF_PREFIX}orch_api"
+GC_CMDLINE_KEY_STATUS_API = f"{GC_CMDLINE_DEF_PREFIX}status_api"
+
+AGENT_CAPABILITIES = ("guest_machine",)
+AGENT_FACTS = ()
+AGENT_PAYLOAD_PATH = "/payload.json"
+
+
+class MachineStatus(str, enum.Enum):
+    NEW = "NEW"
+    SCHEDULED = "SCHEDULED"
+    IN_PROGRESS = "IN_PROGRESS"
+    STARTED = "STARTED"
+    ACTIVE = "ACTIVE"
+    IDLE = "IDLE"
+    ERROR = "ERROR"
+    FLASHED = "FLASHED"

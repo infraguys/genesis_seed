@@ -13,20 +13,19 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
-import os
 import logging
-import subprocess
+import uuid as sys_uuid
 
 from genesis_seed.services import basic
-from genesis_seed.common import clients
 from genesis_seed.common import utils
 from genesis_seed.dm import models
-from genesis_seed.common import http
+from genesis_seed.common.orch import core
+from genesis_seed.common import constants as c
+from genesis_seed.drivers import guest
 
 
 LOG = logging.getLogger(__name__)
-DEFAULT_BLOCK_DEVICE = "/dev/vda"
+PAYLOAD_UPDATE_RATE = 60
 
 
 class SeedOSAgentService(basic.BasicService):
@@ -34,89 +33,66 @@ class SeedOSAgentService(basic.BasicService):
 
     def __init__(
         self,
-        user_api: clients.UserAPI,
+        core_client: core.CoreClient,
+        agent_uuid: sys_uuid.UUID | None = None,
+        payload_path: str | None = c.AGENT_PAYLOAD_PATH,
         iter_min_period=3,
         iter_pause=0.1,
     ):
         super().__init__(iter_min_period, iter_pause)
         self._system_uuid = utils.system_uuid()
-        self._user_api = user_api
+        self._api = core_client
+        self._agent_uuid = agent_uuid or utils.system_uuid()
+        self._payload_path = payload_path
 
-    def _is_ready(self) -> bool:
-        return os.path.exists(self.FINISH_FLAG_PATH)
+        # NOTE(akremenetsky): Someday we will have a dynamic driver
+        # registration but for now directly call specific drivers.
+        self._caps_drivers = [guest.GuestCapDriver()]
 
-    def _mark_ready(self):
-        with open(self.FINISH_FLAG_PATH, "w") as f:
-            f.write("")
+    def _register_agent(self) -> None:
+        agent = models.UniversalAgent.from_system_uuid(
+            c.AGENT_CAPABILITIES, c.AGENT_FACTS, self._agent_uuid
+        )
+        try:
+            self._api.agents_create(agent)
+            LOG.info("Agent registered: %s", agent.uuid)
+        except core.AgentAlreadyExists:
+            LOG.warning("Agent already registered: %s", agent.uuid)
+
+            # Update the agent capabilities and facts if they were changed
+            self._api.agents_update(agent)
+
+    def _cap_driver_iteration(
+        self,
+        driver: guest.GuestCapDriver,
+        payload: models.Payload,
+    ) -> None:
+        driver.run(self._api, payload)
+
+    def _setup(self):
+        # Call registry at start to update capabilities and facts
+        self._register_agent()
 
     def _iteration(self):
-        LOG.warning("Iteration %s", self._iteration_number)
-        if self._is_ready():
+        # Last successfully saved payload. Use it to compare with CP payload.
+        # Explicitly load the payload every PAYLOAD_UPDATE_RATE iterations
+        if (
+            self._payload_path
+            and self._iteration_number % PAYLOAD_UPDATE_RATE != 0
+        ):
+            last_payload = models.Payload.load(self._payload_path)
+        else:
+            last_payload = None
+
+        # Get the payload from the control plane
+        try:
+            payload = self._api.agents_get_payload(
+                self._agent_uuid, last_payload
+            )
+        except core.AgentNotFound:
+            # Auto discovery mechanism
+            self._register_agent()
             return
 
-        machines = self._user_api.machines.filter(
-            firmware_uuid=str(self._system_uuid)
-        )
-
-        # The auto discovery feature is not yet implemented
-        # It will be added in the future
-        if not machines:
-            LOG.warning("No machines found")
-            return
-
-        machine: models.Machine = machines[0]
-
-        # Free machine
-        if not machine.node:
-            if machine.status != "IDLE":
-                self._user_api.machines.update(
-                    machine.uuid,
-                    status="IDLE",
-                )
-            return
-
-        node: models.Node = self._user_api.nodes.get(machine.node)
-
-        if not node.image.startswith("http"):
-            raise ValueError(f"Image is not a URL: {node.image}")
-
-        progress = 0
-        LOG.warning("Flashing progress: 0%")
-        self._user_api.machines.update(machine.uuid, status="IN_PROGRESS")
-        self._user_api.nodes.update(node.uuid, status="IN_PROGRESS")
-
-        def handler(total: int, read: int, written: int, chunk: bytes):
-            nonlocal progress
-            if total == 0:
-                LOG.warning(
-                    "Flashing progress: %d MiB written", written / 1024**2
-                )
-                return
-            current_progress = int((read / total) * 100)
-            if current_progress > progress:
-                progress = current_progress
-                LOG.warning(
-                    "Flashing progress: %d%%, %d MiB written",
-                    progress,
-                    written / 1024**2,
-                )
-
-        http.stream_to_file(
-            source_url=node.image,
-            destination_path=DEFAULT_BLOCK_DEVICE,
-            chunk_handler=handler,
-        )
-        LOG.warning("Flashing progress: 100%")
-
-        utils.flush_disk(DEFAULT_BLOCK_DEVICE)
-
-        self._user_api.machines.update(
-            machine.uuid,
-            boot="hd0",
-            status="ACTIVE",
-            image=node.image,
-        )
-        self._user_api.nodes.update(node.uuid, status="ACTIVE")
-
-        self._mark_ready()
-        subprocess.run("/bin/sh -c '(sleep 1 && reboot -f)&'", shell=True)
+        for driver in self._caps_drivers:
+            self._cap_driver_iteration(driver, payload)
