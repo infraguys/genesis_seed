@@ -19,6 +19,7 @@ import json
 import logging
 import urllib.request
 import urllib.parse
+import urllib.error
 import typing as tp
 import zlib
 
@@ -32,7 +33,15 @@ JSON_CONTENT_TYPE = "application/json"
 
 
 class HttpError(exceptions.GSException):
-    message = "Http Error: %(http_err)s"
+    message = "Http error: %(http_err)s"
+
+
+class HttpNotFoundError(exceptions.GSException):
+    message = "Http not found error: %(http_err)s"
+
+
+class HttpConflictError(exceptions.GSException):
+    message = "Http conflict error: %(http_err)s"
 
 
 class DownloadMismatchError(exceptions.GSException):
@@ -52,11 +61,22 @@ class HttpResp:
         self.content_type = content_type
         self.resp_code = resp_code
 
-    def json(self) -> tp.Dict[str, tp.Any] | None:
+    def json(self) -> dict[str, tp.Any] | None:
         if self.content_type == JSON_CONTENT_TYPE:
             return json.loads(self.text.decode("utf-8"))
 
         raise HttpError(http_err="Invalid content type")
+
+    def raise_for_status(self):
+        if self.resp_code < 400:
+            return
+
+        if self.resp_code == 404:
+            raise HttpNotFoundError(http_err=self.text)
+        elif self.resp_code == 409:
+            raise HttpConflictError(http_err=self.text)
+
+        raise HttpError(http_err=self.text)
 
 
 class HttpClient:
@@ -68,10 +88,14 @@ class HttpClient:
         method: HttpMethodType,
         url: str,
         data: tp.Any | None = None,
-        headers: tp.Dict[str, tp.Any] | None = None,
+        headers: dict[str, tp.Any] | None = None,
+        params: dict[str, tp.Any] | None = None,
     ) -> HttpResp:
         if headers is None:
             headers = {}
+
+        if params is not None:
+            url += "?" + urllib.parse.urlencode(params)
 
         if data is not None:
             if isinstance(data, dict) or isinstance(data, list):
@@ -81,43 +105,71 @@ class HttpClient:
         req = urllib.request.Request(
             url, data=data, headers=headers, method=method
         )
-        with urllib.request.urlopen(req, timeout=self._timeout) as response:
+
+        try:
+            with urllib.request.urlopen(
+                req, timeout=self._timeout
+            ) as response:
+                return HttpResp(
+                    resp_code=response.status,
+                    text=response.read(),
+                    content_type=response.getheader("Content-Type"),
+                )
+        except urllib.error.HTTPError as e:
             return HttpResp(
-                resp_code=response.status,
-                text=response.read(),
-                content_type=response.getheader("Content-Type"),
+                resp_code=e.code,
+                text=e.read().decode("utf-8"),
+                content_type=e.headers.get("Content-Type", ""),
             )
 
     def get(
         self,
         url: str,
-        params: tp.Optional[tp.Dict[str, tp.Any]] = None,
-        headers: tp.Dict[str, tp.Any] | None = None,
+        params: dict[str, tp.Any] | None = None,
+        headers: dict[str, tp.Any] | None = None,
+        raise_for_status: bool = True,
     ) -> HttpResp:
         if params:
             url += "?" + urllib.parse.urlencode(params)
-        return self._request("GET", url, headers=headers)
+        resp = self._request("GET", url, headers=headers)
+        if raise_for_status:
+            resp.raise_for_status()
+        return resp
 
     def post(
         self,
         url: str,
-        data: str | tp.Dict[str, tp.Any],
-        headers: tp.Dict[str, tp.Any] | None = None,
+        data: str | dict[str, tp.Any],
+        headers: dict[str, tp.Any] | None = None,
+        raise_for_status: bool = True,
     ) -> HttpResp:
-        return self._request("POST", url, data=data, headers=headers)
+        resp = self._request("POST", url, data=data, headers=headers)
+        if raise_for_status:
+            resp.raise_for_status()
+        return resp
 
     def put(
         self,
         url: str,
-        data: str | tp.Dict[str, tp.Any],
-        headers: tp.Dict[str, tp.Any] | None = None,
+        data: str | dict[str, tp.Any],
+        headers: dict[str, tp.Any] | None = None,
+        raise_for_status: bool = True,
     ) -> HttpResp:
-        return self._request("PUT", url, data=data, headers=headers)
+        resp = self._request("PUT", url, data=data, headers=headers)
+        if raise_for_status:
+            resp.raise_for_status()
+        return resp
 
     def delete(
-        self, url: str, headers: tp.Dict[str, tp.Any] | None = None
+        self,
+        url: str,
+        headers: dict[str, tp.Any] | None = None,
+        raise_for_status: bool = True,
     ) -> HttpResp:
-        return self._request("DELETE", url, headers=headers)
+        resp = self._request("DELETE", url, headers=headers)
+        if raise_for_status:
+            resp.raise_for_status()
+        return resp
 
 
 class BaseChunkHandler:
