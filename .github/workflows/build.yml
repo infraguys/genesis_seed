@@ -2,6 +2,19 @@ name: build
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      build_target:
+        description: 'Build target'
+        required: true
+        default: 'manual'
+        type: choice
+        options:
+        - manual
+
+env:
+  PROJECT_NAME: seed_os
+  REPO_ENDPOINT_PUT: http://10.20.0.1:8082
 
 jobs:
   Build:
@@ -9,8 +22,26 @@ jobs:
     strategy:
       fail-fast: true
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 30
       - name: Build binaries(Kernel, Busybox, Python, Initrd) on Self-Hosted runner
         run: |
           make clean && make
+      - name: Install DevTools
+        id: devtools
+        run: |
+          set -eux
 
+          # Install DevTools
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install genesis-devtools
+          VERSION="$(genesis get-version .)"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+      - name: Upload kernel and initrd to GC repository
+        run: |
+          curl -X PUT --upload-file ./initrd.img \
+            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/${{ steps.devtools.outputs.VERSION }}/initrd.img
+          curl -X PUT --upload-file ./vmlinuz \
+            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/${{ steps.devtools.outputs.VERSION }}/vmlinuz
