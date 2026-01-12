@@ -151,7 +151,9 @@ build_initrd:
 	cd ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}/ && \
 		find . -name '*.py[co]' -delete && \
 		find . -name __pycache__ -type d -exec rm -rf {} +
-
+# Add CA certificates
+	mkdir -p ${RAMDISK_DIR}/etc/ssl/certs
+	cp /etc/ssl/certs/ca-certificates.crt ${RAMDISK_DIR}/etc/ssl/certs/
 # Build initramfs
 	cd ${RAMDISK_DIR} && \
 		find . | cpio -H newc -o | gzip -9 >../${RAMDISK_NAME}
