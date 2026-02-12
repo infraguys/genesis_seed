@@ -17,7 +17,6 @@ import os
 import random
 import logging
 import subprocess
-import typing as tp
 
 from genesis_seed.common import utils
 from genesis_seed.common.http import base as http
@@ -29,6 +28,10 @@ LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 DEFAULT_BLOCK_DEVICE = "/dev/vda"
 KIND = "guest_machine"
+
+
+def ro_opener(path, flags):
+    return os.open(path, flags, 0o400)
 
 
 class GuestCapDriver:
@@ -47,8 +50,22 @@ class GuestCapDriver:
     def _reboot(self) -> None:
         subprocess.run("/bin/sh -c '(sleep 1 && reboot -f)&'", shell=True)
 
+    def _shutdown(self) -> None:
+        subprocess.run("/bin/sh -c '(sleep 1 && poweroff -f)&'", shell=True)
+
     def _gen_hash(self) -> str:
         return str(random.randint(0, 100_000_000))
+
+    @property
+    def _private_key_path(self) -> str:
+        return os.path.join(
+            c.ROOTFS_MOUNT_PATH,
+            "var",
+            "lib",
+            "genesis",
+            "universal_agent",
+            "private_key",
+        )
 
     def _empty_machine_resource(self) -> models.Resource:
         machine = models.GuestMachine(
@@ -137,6 +154,22 @@ class GuestCapDriver:
 
         utils.flush_disk(DEFAULT_BLOCK_DEVICE)
 
+        block_devices = utils.block_devices()
+        utils.mount_root_partition(
+            block_devices, mount_point=c.ROOTFS_MOUNT_PATH
+        )
+
+        # Get the secret key from the Boot API and prepare
+        # it for the agents in the main OS.
+        private_key = api.private_keys_refresh(self._machine.uuid)
+        os.makedirs(os.path.dirname(self._private_key_path), exist_ok=True)
+        with open(self._private_key_path, "w", opener=ro_opener) as f:
+            f.write(private_key)
+        LOG.warning("Private key written to %s", self._private_key_path)
+
+        utils.unmount_root_partition(mount_point=c.ROOTFS_MOUNT_PATH)
+        LOG.warning("Root partition unmounted")
+
         # Set the status to FLASHED in the Status API
         guest["status"] = c.MachineStatus.FLASHED.value
         api.resources_update(
@@ -148,4 +181,4 @@ class GuestCapDriver:
         )
 
         self._mark_ready()
-        self._reboot()
+        self._shutdown()

@@ -13,11 +13,19 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import os
+import subprocess
 import typing as tp
 import uuid as sys_uuid
-import subprocess
+import logging
 
 from genesis_seed.common import constants as c
+from genesis_seed.dm import hw_models
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.INFO)
+
+SYS_BLOCK_PATH = "/sys/block"
 
 
 def node_uuid(path: str = c.NODE_UUID_PATH) -> sys_uuid.UUID:
@@ -76,3 +84,95 @@ def cfg_from_cmdline(
         cfg[key] = value
 
     return cfg
+
+
+def block_devices(skip_virtual: bool = True) -> list[hw_models.BlockDevice]:
+    devices = []
+    if not os.path.isdir(SYS_BLOCK_PATH):
+        return devices
+
+    # Detect block devices
+    for bd in os.listdir(SYS_BLOCK_PATH):
+        bd_path = os.path.join(SYS_BLOCK_PATH, bd)
+        try:
+            realpath = os.path.realpath(bd_path)
+        except OSError:
+            continue
+
+        if skip_virtual and "/devices/virtual/" in realpath:
+            continue
+
+        device = hw_models.BlockDevice.from_sysfs_block_path(bd_path)
+        devices.append(device)
+
+        # Detect partitions
+        for partition in os.listdir(bd_path):
+            partition_path = os.path.join(bd_path, partition)
+
+            # Skip non-partitions
+            if not os.path.exists(os.path.join(partition_path, "partition")):
+                continue
+
+            partition_device = hw_models.BlockDevice.from_sysfs_block_path(
+                partition_path
+            )
+
+            device.partitions.append(partition_device)
+
+    return devices
+
+
+def mount_root_partition(
+    devices: list[hw_models.BlockDevice],
+    mount_point: str = "/mnt",
+    indicators: tuple[str, ...] = ("var", "dev", "boot"),
+) -> None:
+    if not devices:
+        raise FileNotFoundError("No devices found")
+
+    os.makedirs(mount_point, exist_ok=True)
+
+    # Check if something is already mounted at mount_point
+    result = subprocess.run(
+        ["mountpoint", "-q", mount_point],
+        capture_output=True,
+    )
+    if result.returncode == 0:
+        LOG.warning("Something is already mounted at %s", mount_point)
+        return
+
+    for device in devices:
+        for partition in device.partitions:
+            # It's fine if nothing is mounted at mount_point
+            unmount_root_partition(mount_point)
+
+            try:
+                subprocess.check_call(
+                    ["mount", partition.path, mount_point],
+                )
+            except subprocess.CalledProcessError:
+                # Just skip it, try the next partition
+                continue
+
+            # Check if it is the root partition
+            if any(
+                not os.path.exists(os.path.join(mount_point, indicator))
+                for indicator in indicators
+            ):
+                continue
+
+            LOG.warning(
+                "Root partition %s mounted at %s", partition.path, mount_point
+            )
+            return
+
+    raise FileNotFoundError("The root partition was not found")
+
+
+def unmount_root_partition(mount_point: str = "/mnt") -> None:
+    result = subprocess.run(["mountpoint", "-q", mount_point])
+    if result.returncode != 0:
+        LOG.warning("Nothing is mounted at %s", mount_point)
+        return
+
+    subprocess.check_call(["umount", mount_point])

@@ -117,6 +117,19 @@ class UniversalAgentsClient(BaseModelClient):
         return last_payload if last_payload == cp_payload else cp_payload
 
 
+class NodeEncryptionKeyClient(BaseModelClient):
+    __collection_url__ = "/v1/nodes/"
+    __model__ = models.NodeEncryptionKey
+
+    def refresh_secret(self, uuid: sys_uuid.UUID) -> str:
+        data = self.do_action(
+            "refresh_secret",
+            uuid,
+            invoke=True,
+        )
+        return data["key"]
+
+
 class ResourcesClient(BaseModelClient):
     API_VERSION = "v1"
 

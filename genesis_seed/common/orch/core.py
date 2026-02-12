@@ -43,23 +43,21 @@ class ResourceNotFound(base_exc.GSException):
     message = "Resource not found: %(uuid)s"
 
 
-class OrchAPI:
-    def __init__(self, base_url: str) -> None:
-        self._agents_client = clients.UniversalAgentsClient(base_url)
-
-    @property
-    def agents(self):
-        return self._agents_client
-
-
-class StatusAPI:
+class BootAPI:
     def __init__(self, base_url: str) -> None:
         self._base_url = base_url
         self._agents_client = clients.UniversalAgentsClient(base_url)
+        self._encryption_keys_client = clients.NodeEncryptionKeyClient(
+            base_url
+        )
 
     @property
     def agents(self):
         return self._agents_client
+
+    @property
+    def encryption_keys(self):
+        return self._encryption_keys_client
 
     @functools.lru_cache
     def resources(self, kind: str) -> clients.ResourcesClient:
@@ -69,20 +67,17 @@ class StatusAPI:
 class CoreClient:
     def __init__(
         self,
-        orch_endpoint: str,
-        status_endpoint: str,
+        boot_endpoint: str,
     ) -> None:
-        self._orch_endpoint = orch_endpoint
-        self._status_endpoint = status_endpoint
-        self._orch_api = OrchAPI(orch_endpoint)
-        self._status_api = StatusAPI(status_endpoint)
+        self._boot_endpoint = boot_endpoint
+        self._boot_api = BootAPI(boot_endpoint)
 
     def agents_create(
         self, agent: models.UniversalAgent, **kwargs: tp.Any
     ) -> models.UniversalAgent:
         """Create an instance of Universal agent."""
         try:
-            agent = self._status_api.agents.create(agent)
+            agent = self._boot_api.agents.create(agent)
             LOG.info("Agent registered: %s", agent.uuid)
         except http.HttpConflictError:
             raise AgentAlreadyExists(uuid=agent.uuid)
@@ -100,7 +95,7 @@ class CoreClient:
                 "name": agent.name,
             }
 
-            agent = self._status_api.agents.update(agent.uuid, **data)
+            agent = self._boot_api.agents.update(agent.uuid, **data)
             LOG.info("Agent updated: %s", agent.uuid)
         except http.HttpNotFoundError:
             raise AgentNotFound(uuid=agent.uuid)
@@ -118,7 +113,7 @@ class CoreClient:
             payload = models.Payload.empty()
 
         try:
-            payload = self._orch_api.agents.get_payload(uuid, payload)
+            payload = self._boot_api.agents.get_payload(uuid, payload)
         except http.HttpNotFoundError:
             raise AgentNotFound(uuid=uuid)
 
@@ -129,9 +124,7 @@ class CoreClient:
     ) -> models.Resource:
         """Create a resource."""
         try:
-            resource = self._status_api.resources(resource.kind).create(
-                resource
-            )
+            resource = self._boot_api.resources(resource.kind).create(resource)
             LOG.info("Resource created: %s", resource.uuid)
         except http.HttpConflictError:
             raise ResourceAlreadyExists(uuid=resource.uuid)
@@ -143,7 +136,7 @@ class CoreClient:
     ) -> models.Resource:
         """Get the resource."""
         try:
-            resource = self._status_api.resources(kind).get(uuid)
+            resource = self._boot_api.resources(kind).get(uuid)
         except http.HttpNotFoundError:
             raise ResourceNotFound(uuid=uuid)
 
@@ -161,7 +154,7 @@ class CoreClient:
                 # The positional `uuid` is a UUID object and validated.
                 # Remove from kwargs to avoid conflicts when calling update.
                 del kwargs["uuid"]
-            resource = self._status_api.resources(kind).update(uuid, **kwargs)
+            resource = self._boot_api.resources(kind).update(uuid, **kwargs)
         except http.HttpNotFoundError:
             raise ResourceNotFound(uuid=uuid)
 
@@ -172,6 +165,18 @@ class CoreClient:
     ) -> None:
         """Delete the resource."""
         try:
-            self._status_api.resources(resource.kind).delete(resource.uuid)
+            self._boot_api.resources(resource.kind).delete(resource.uuid)
         except http.HttpNotFoundError:
             raise ResourceNotFound(uuid=resource.uuid)
+
+    def private_keys_refresh(
+        self,
+        uuid: sys_uuid.UUID,
+    ) -> str:
+        """Refresh the private key."""
+        try:
+            key = self._boot_api.encryption_keys.refresh_secret(uuid)
+        except http.HttpNotFoundError:
+            raise AgentNotFound(uuid=uuid)
+
+        return key

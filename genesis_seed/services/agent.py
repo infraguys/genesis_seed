@@ -23,7 +23,6 @@ from genesis_seed.common.orch import core
 from genesis_seed.common import constants as c
 from genesis_seed.drivers import guest
 
-
 LOG = logging.getLogger(__name__)
 PAYLOAD_UPDATE_RATE = 60
 
