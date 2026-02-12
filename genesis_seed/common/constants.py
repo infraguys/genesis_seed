@@ -17,19 +17,19 @@ import os
 import enum
 import uuid as sys_uuid
 
-
 GLOBAL_SERVICE_NAME = "genesis_seed"
 SERVICE_PROJECT_ID = sys_uuid.UUID("00000000-0000-0000-0000-000000000000")
 
 WORK_DIR = "/var/lib/genesis"
 NODE_UUID_PATH = os.path.join(WORK_DIR, "node-id")
+PRIVATE_KEY_PATH = os.path.join(WORK_DIR, "private_key")
+ROOTFS_MOUNT_PATH = "/mnt/"
 
 CHUNK_SIZE = 16 << 20  # 16Mb
 
 KERNEL_CMDLINE_PATH = "/proc/cmdline"
 GC_CMDLINE_DEF_PREFIX = "gc_"
-GC_CMDLINE_KEY_ORCH_API = f"{GC_CMDLINE_DEF_PREFIX}orch_api"
-GC_CMDLINE_KEY_STATUS_API = f"{GC_CMDLINE_DEF_PREFIX}status_api"
+GC_CMDLINE_KEY_BOOT_API = f"{GC_CMDLINE_DEF_PREFIX}boot_api"
 
 AGENT_CAPABILITIES = ("guest_machine",)
 AGENT_FACTS = ()

@@ -124,6 +124,22 @@ build_ipxe_bios:
 	cd ipxe/src/ && \
 		make -j${NPROC} bin-x86_64-pcbios/undionly.kpxe EMBED=pcbios.ipxe
 
+build_ipxe_efi:
+	cp configurations/IPXE/uefi.ipxe ipxe/src/
+	cd ipxe/src/ && \
+		make -j${NPROC} bin-x86_64-efi/ipxe.efi EMBED=uefi.ipxe
+
+build_ipxe_1af41041:
+	cp configurations/IPXE/1af41041.ipxe ipxe/src/
+	cp client.crt client.key ipxe/src/
+	cd ipxe/src/ && \
+		make -j${NPROC} bin/1af41041.rom
+
+build_ipxe_1af41041_core:
+	cp configurations/IPXE/1af41041_core.ipxe ipxe/src/
+	cd ipxe/src/ && \
+		make -j${NPROC} bin-x86_64-efi/1af41041.efirom EMBED=1af41041_core.ipxe
+
 clean_ipxe:
 	rm -fr ipxe
 

@@ -246,3 +246,11 @@ class GuestMachine(SimpleViewMixin):
 
     def __post_init__(self):
         self.uuid = sys_uuid.UUID(str(self.uuid))
+
+
+@dataclasses.dataclass
+class NodeEncryptionKey(SimpleViewMixin):
+    """API encryption key model."""
+
+    uuid: sys_uuid.UUID
+    private_key: str

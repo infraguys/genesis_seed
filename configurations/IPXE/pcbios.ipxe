@@ -4,5 +4,5 @@
 
 dhcp || goto start
 
-echo Get configuration from netboot server http://${next-server}:11011
-chain --autofree --replace http://${next-server}:11011/v1/boots/${uuid} || goto start
+echo Get configuration from netboot server http://${next-server}:11013
+chain --autofree --replace http://${next-server}:11013/v1/boots/${uuid} || goto start

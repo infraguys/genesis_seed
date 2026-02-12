@@ -28,23 +28,15 @@ def main():
     # Load configuration from the Kernel command line
     cfg = utils.cfg_from_cmdline()
 
-    if c.GC_CMDLINE_KEY_ORCH_API not in cfg:
+    if c.GC_CMDLINE_KEY_BOOT_API not in cfg:
         raise ValueError(
-            f"Missing {c.GC_CMDLINE_KEY_ORCH_API} parameter "
+            f"Missing {c.GC_CMDLINE_KEY_BOOT_API} parameter "
             "in kernel command line"
         )
 
-    if c.GC_CMDLINE_KEY_STATUS_API not in cfg:
-        raise ValueError(
-            f"Missing {c.GC_CMDLINE_KEY_STATUS_API} parameter "
-            "in kernel command line"
-        )
-
-    log.warning("GC Orch endpoint: %s", cfg[c.GC_CMDLINE_KEY_ORCH_API])
-    log.warning("GC Status endpoint: %s", cfg[c.GC_CMDLINE_KEY_STATUS_API])
+    log.warning("GC Boot endpoint: %s", cfg[c.GC_CMDLINE_KEY_BOOT_API])
     core_client = core.CoreClient(
-        orch_endpoint=cfg[c.GC_CMDLINE_KEY_ORCH_API],
-        status_endpoint=cfg[c.GC_CMDLINE_KEY_STATUS_API],
+        boot_endpoint=cfg[c.GC_CMDLINE_KEY_BOOT_API],
     )
 
     service = SeedOSAgentService(core_client=core_client, iter_min_period=3)
