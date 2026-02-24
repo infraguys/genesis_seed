@@ -28,6 +28,10 @@ LOG.setLevel(logging.INFO)
 SYS_BLOCK_PATH = "/sys/block"
 
 
+class SupportedFSNotFound(Exception):
+    pass
+
+
 def node_uuid(path: str = c.NODE_UUID_PATH) -> sys_uuid.UUID:
     with open(path, "r") as f:
         return sys_uuid.UUID(f.read().strip())
@@ -141,8 +145,10 @@ def mount_root_partition(
         LOG.warning("Something is already mounted at %s", mount_point)
         return
 
+    count = 0
     for device in devices:
         for partition in device.partitions:
+            count += 1
             # It's fine if nothing is mounted at mount_point
             unmount_root_partition(mount_point)
 
@@ -162,11 +168,14 @@ def mount_root_partition(
                 continue
 
             LOG.warning(
-                "Root partition %s mounted at %s", partition.path, mount_point
+                "Root partition %s mounted at %s in %s tries",
+                partition.path,
+                mount_point,
+                count,
             )
             return
 
-    raise FileNotFoundError("The root partition was not found")
+    raise SupportedFSNotFound(f"The root partition was not found on {count} partitions")
 
 
 def unmount_root_partition(mount_point: str = "/mnt") -> None:
