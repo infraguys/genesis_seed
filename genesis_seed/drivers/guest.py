@@ -132,9 +132,7 @@ class GuestCapDriver:
         def handler(total: int, read: int, written: int, chunk: bytes):
             nonlocal progress
             if total == 0:
-                LOG.warning(
-                    "Flashing progress: %d MiB written", written / 1024**2
-                )
+                LOG.warning("Flashing progress: %d MiB written", written / 1024**2)
                 return
             current_progress = int((read / total) * 100)
             if current_progress > progress:
@@ -155,20 +153,21 @@ class GuestCapDriver:
         utils.flush_disk(DEFAULT_BLOCK_DEVICE)
 
         block_devices = utils.block_devices()
-        utils.mount_root_partition(
-            block_devices, mount_point=c.ROOTFS_MOUNT_PATH
-        )
+        try:
+            utils.mount_root_partition(block_devices, mount_point=c.ROOTFS_MOUNT_PATH)
 
-        # Get the secret key from the Boot API and prepare
-        # it for the agents in the main OS.
-        private_key = api.private_keys_refresh(self._machine.uuid)
-        os.makedirs(os.path.dirname(self._private_key_path), exist_ok=True)
-        with open(self._private_key_path, "w", opener=ro_opener) as f:
-            f.write(private_key)
-        LOG.warning("Private key written to %s", self._private_key_path)
+            # Get the secret key from the Boot API and prepare
+            # it for the agents in the main OS.
+            private_key = api.private_keys_refresh(self._machine.uuid)
+            os.makedirs(os.path.dirname(self._private_key_path), exist_ok=True)
+            with open(self._private_key_path, "w", opener=ro_opener) as f:
+                f.write(private_key)
+            LOG.warning("Private key written to %s", self._private_key_path)
 
-        utils.unmount_root_partition(mount_point=c.ROOTFS_MOUNT_PATH)
-        LOG.warning("Root partition unmounted")
+            utils.unmount_root_partition(mount_point=c.ROOTFS_MOUNT_PATH)
+            LOG.warning("Root partition unmounted")
+        except utils.SupportedFSNotFound as e:
+            LOG.warning("Supported FS not found, skip writing private key: %s", e)
 
         # Set the status to FLASHED in the Status API
         guest["status"] = c.MachineStatus.FLASHED.value
