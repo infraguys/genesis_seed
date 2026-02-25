@@ -30,8 +30,7 @@ def main():
 
     if c.GC_CMDLINE_KEY_BOOT_API not in cfg:
         raise ValueError(
-            f"Missing {c.GC_CMDLINE_KEY_BOOT_API} parameter "
-            "in kernel command line"
+            f"Missing {c.GC_CMDLINE_KEY_BOOT_API} parameter in kernel command line"
         )
 
     log.warning("GC Boot endpoint: %s", cfg[c.GC_CMDLINE_KEY_BOOT_API])

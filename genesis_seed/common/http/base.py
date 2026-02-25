@@ -50,8 +50,7 @@ class DownloadMismatchError(exceptions.GSException):
 
 class DownloadDecompressError(exceptions.GSException):
     message = (
-        "EOF not found while decompressing, broken original archive "
-        "or download error."
+        "EOF not found while decompressing, broken original archive or download error."
     )
 
 
@@ -102,14 +101,10 @@ class HttpClient:
                 data = json.dumps(data).encode("utf-8")
                 headers["Content-Type"] = JSON_CONTENT_TYPE
 
-        req = urllib.request.Request(
-            url, data=data, headers=headers, method=method
-        )
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
 
         try:
-            with urllib.request.urlopen(
-                req, timeout=self._timeout
-            ) as response:
+            with urllib.request.urlopen(req, timeout=self._timeout) as response:
                 return HttpResp(
                     resp_code=response.status,
                     text=response.read(),
@@ -184,9 +179,7 @@ class BaseChunkHandler:
 
     def is_clean(self):
         if not self.content_length == self.in_bytes:
-            raise DownloadMismatchError(
-                expected=self.content_length, got=self.written
-            )
+            raise DownloadMismatchError(expected=self.content_length, got=self.written)
 
 
 class PlainChunkHandler(BaseChunkHandler):
@@ -260,9 +253,7 @@ def stream_to_file(
         ) == "gzip" or source_url.endswith(".gz")
 
         if is_gzipped:
-            LOG.warning(
-                "Got gzipped stream/file, progress will be innacurate..."
-            )
+            LOG.warning("Got gzipped stream/file, progress will be innacurate...")
             chunker = GZChunkHandler(content_length, chunk_size=chunk_size)
         else:
             chunker = PlainChunkHandler(content_length)

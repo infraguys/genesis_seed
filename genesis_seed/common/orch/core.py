@@ -47,9 +47,7 @@ class BootAPI:
     def __init__(self, base_url: str) -> None:
         self._base_url = base_url
         self._agents_client = clients.UniversalAgentsClient(base_url)
-        self._encryption_keys_client = clients.NodeEncryptionKeyClient(
-            base_url
-        )
+        self._encryption_keys_client = clients.NodeEncryptionKeyClient(base_url)
 
     @property
     def agents(self):
@@ -160,9 +158,7 @@ class CoreClient:
 
         return resource
 
-    def resources_delete(
-        self, resource: models.Resource, **kwargs: tp.Any
-    ) -> None:
+    def resources_delete(self, resource: models.Resource, **kwargs: tp.Any) -> None:
         """Delete the resource."""
         try:
             self._boot_api.resources(resource.kind).delete(resource.uuid)
