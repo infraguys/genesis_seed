@@ -33,9 +33,9 @@ class BaseModelClient(base.HttpClient):
         self._base_url = base_url
 
     def _collection_url(self):
-        if not self._base_url.endswith(
+        if not self._base_url.endswith("/") and not self.__collection_url__.startswith(
             "/"
-        ) and not self.__collection_url__.startswith("/"):
+        ):
             return self._base_url + "/" + self.__collection_url__
         return self._base_url + self.__collection_url__
 
@@ -47,13 +47,9 @@ class BaseModelClient(base.HttpClient):
         resp = super().get(url)
         return self.__model__.restore_from_simple_view(**resp.json())
 
-    def filter(
-        self, **filters: dict[str, tp.Any]
-    ) -> list[models.SimpleViewMixin]:
+    def filter(self, **filters: dict[str, tp.Any]) -> list[models.SimpleViewMixin]:
         resp = super().get(self._collection_url(), params=filters)
-        return [
-            self.__model__.restore_from_simple_view(**o) for o in resp.json()
-        ]
+        return [self.__model__.restore_from_simple_view(**o) for o in resp.json()]
 
     def create(self, object: models.SimpleViewMixin) -> models.SimpleViewMixin:
         data = object.dump_to_simple_view()

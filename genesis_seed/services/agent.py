@@ -75,19 +75,14 @@ class SeedOSAgentService(basic.BasicService):
     def _iteration(self):
         # Last successfully saved payload. Use it to compare with CP payload.
         # Explicitly load the payload every PAYLOAD_UPDATE_RATE iterations
-        if (
-            self._payload_path
-            and self._iteration_number % PAYLOAD_UPDATE_RATE != 0
-        ):
+        if self._payload_path and self._iteration_number % PAYLOAD_UPDATE_RATE != 0:
             last_payload = models.Payload.load(self._payload_path)
         else:
             last_payload = None
 
         # Get the payload from the control plane
         try:
-            payload = self._api.agents_get_payload(
-                self._agent_uuid, last_payload
-            )
+            payload = self._api.agents_get_payload(self._agent_uuid, last_payload)
         except core.AgentNotFound:
             # Auto discovery mechanism
             self._register_agent()

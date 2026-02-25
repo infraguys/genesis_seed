@@ -26,9 +26,7 @@ class BlockDevice:
     partitions: list["BlockDevice"] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_sysfs_block_path(
-        cls, path: str, sector_size: int = 512
-    ) -> "BlockDevice":
+    def from_sysfs_block_path(cls, path: str, sector_size: int = 512) -> "BlockDevice":
         with open(os.path.join(path, "size"), "r") as f:
             sectors = int(f.read().strip())
         size = (sectors * sector_size) // (1024**3)
