@@ -15,12 +15,15 @@
 #    under the License.
 from __future__ import annotations
 
+import hashlib
+import io
 import json
 import logging
-import urllib.request
-import urllib.parse
-import urllib.error
+import os
 import typing as tp
+import urllib.error
+import urllib.parse
+import urllib.request
 import zlib
 
 from genesis_seed.common import exceptions
@@ -179,7 +182,7 @@ class BaseChunkHandler:
 
     def is_clean(self):
         if not self.content_length == self.in_bytes:
-            raise DownloadMismatchError(expected=self.content_length, got=self.written)
+            raise DownloadMismatchError(expected=self.content_length, got=self.in_bytes)
 
 
 class PlainChunkHandler(BaseChunkHandler):
@@ -225,7 +228,7 @@ def stream_to_file(
     destination_path: str,
     chunk_size: int = c.CHUNK_SIZE,
     chunk_handler: tp.Callable | None = None,
-) -> None:
+) -> str:
     """
     Downloads a file from a source URL and streams it to a destination path.
 
@@ -239,8 +242,11 @@ def stream_to_file(
     :param chunk_handler: Optional callable to call for each chunk of data
     :raises DownloadMismatchError: If the total amount of data written to disk
         does not match the content length in the HTTP response headers
+    :returns: Hex-encoded SHA-256 checksum of the downloaded (compressed)
+        byte stream as it was received from the server
     """
     read = written = 0
+    sha256 = hashlib.sha256()
 
     req = urllib.request.Request(source_url)
     # It's absurd to compress already compressed file
@@ -262,6 +268,8 @@ def stream_to_file(
             while True:
                 chunk = response.read(chunk_size)
                 read += len(chunk)
+                if chunk:
+                    sha256.update(chunk)
                 written += chunker.handle_chunk(chunk, file)
 
                 if not chunk:
@@ -270,4 +278,59 @@ def stream_to_file(
                 if chunk_handler is not None:
                     chunk_handler(content_length, read, written, chunk)
 
+            # Flush and sync to ensure data is written to disk
+            file.flush()
+            os.fsync(file.fileno())
+
     chunker.is_clean()
+    return sha256.hexdigest()
+
+
+def stream_to_bytes(
+    source_url: str,
+    chunk_size: int = c.CHUNK_SIZE,
+    chunk_handler: tp.Callable | None = None,
+) -> bytes:
+    """
+    Downloads a file from a source URL and returns it as bytes.
+
+    The caller can pass a chunk handler that will be called for each chunk of
+    data as it is received. The handler is passed the total content length of
+    the file, the amount of data written to disk, and the actual chunk of data.
+
+    :param source_url: URL to download from
+    :param chunk_size: Size of chunks to read from the URL in bytes
+    :param chunk_handler: Optional callable to call for each chunk of data
+    :returns: The downloaded data as bytes
+    """
+    read = written = 0
+
+    req = urllib.request.Request(source_url)
+    if not source_url.endswith(".gz"):
+        req.add_header("Accept-Encoding", "gzip")
+    with urllib.request.urlopen(req) as response:
+        content_length = int(response.headers.get("Content-Length", 0))
+        is_gzipped = response.headers.get(
+            "Content-Encoding"
+        ) == "gzip" or source_url.endswith(".gz")
+
+        if is_gzipped:
+            LOG.warning("Got gzipped stream/file, progress will be innacurate...")
+            chunker = GZChunkHandler(content_length, chunk_size=chunk_size)
+        else:
+            chunker = PlainChunkHandler(content_length)
+
+        out = io.BytesIO()
+        while True:
+            chunk = response.read(chunk_size)
+            read += len(chunk)
+            written += chunker.handle_chunk(chunk, out)
+
+            if not chunk:
+                break
+
+            if chunk_handler is not None:
+                chunk_handler(content_length, read, written, chunk)
+
+    chunker.is_clean()
+    return out.getvalue()
