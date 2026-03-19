@@ -17,6 +17,9 @@ import os
 import random
 import logging
 import subprocess
+import sys
+import urllib.error
+import time
 
 from genesis_seed.common import utils
 from genesis_seed.common.http import base as http
@@ -28,10 +31,27 @@ LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
 DEFAULT_BLOCK_DEVICE = "/dev/vda"
 KIND = "guest_machine"
+SHA256SUM_SUFFIX = ".SHA256SUM"
 
 
 def ro_opener(path, flags):
     return os.open(path, flags, 0o400)
+
+
+def render_progress_bar(percent: int, width: int = 30) -> str:
+    """Return simple ASCII progress bar string for the given percent."""
+    clamped = max(0, min(100, percent))
+    filled = int(width * clamped / 100)
+    bar = "=" * filled + "-" * (width - filled)
+    return f"[{bar}] {clamped:3d}%"
+
+
+def display_progress_line(percent: int, written_bytes: int) -> None:
+    """Write progress bar on a single console line using carriage return."""
+    bar = render_progress_bar(percent)
+    written_mib = written_bytes / 1024**2
+    sys.stdout.write(f"\rFlashing progress: {bar}, {written_mib:.2f} MiB written")
+    sys.stdout.flush()
 
 
 class GuestCapDriver:
@@ -55,6 +75,79 @@ class GuestCapDriver:
 
     def _gen_hash(self) -> str:
         return str(random.randint(0, 100_000_000))
+
+    def _download_image(
+        self,
+        image_url: str,
+        destination_path: str,
+    ) -> None:
+        expected_sha256 = None
+        checksum_url = image_url + SHA256SUM_SUFFIX
+        progress = 0
+
+        # Handler for progress tracking
+        def handler(total: int, read: int, written: int, chunk: bytes):
+            nonlocal progress
+            if total == 0:
+                LOG.warning("Flashing progress: %d MiB written", written / 1024**2)
+                return
+            current_progress = int((read / total) * 100)
+            if current_progress > progress:
+                progress = current_progress
+                display_progress_line(progress, written)
+
+        try:
+            checksum_bytes = http.stream_to_bytes(checksum_url)
+            checksum_text = checksum_bytes.decode("utf-8").strip()
+            if checksum_text:
+                expected_sha256 = checksum_text.split()[0].lower()
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                LOG.warning("SHA256SUM file not found, continue without checksum")
+            else:
+                raise
+
+        # Download the image with retry logic until it succeeds and (optionally)
+        # the checksum matches the expected SHA256 value from the .SHA256SUM file.
+        # On network or checksum errors, wait a bit and retry.
+        while True:
+            progress = 0
+
+            LOG.info("Starting download from %s to %s", image_url, destination_path)
+            try:
+                downloaded_sha256 = http.stream_to_file(
+                    source_url=image_url,
+                    destination_path=destination_path,
+                    chunk_handler=handler,
+                ).lower()
+            except (
+                urllib.error.URLError,
+                http.DownloadMismatchError,
+                http.DownloadDecompressError,
+            ):
+                # Use random timeout to avoid thundering herd
+                timeout = random.randint(5, 60)
+                LOG.exception("Download failed, retrying in %d seconds...", timeout)
+                time.sleep(timeout)
+                continue
+
+            if expected_sha256 is not None and downloaded_sha256 != expected_sha256:
+                LOG.warning(
+                    "SHA256 mismatch, retry download. Expected: %s, got: %s",
+                    expected_sha256,
+                    downloaded_sha256,
+                )
+                # Use random timeout to avoid thundering herd
+                timeout = random.randint(5, 60)
+                LOG.warning("Download failed, retrying in %d seconds...", timeout)
+                time.sleep(timeout)
+                continue
+
+            break
+
+        # Finish the progress line with a newline so subsequent logs start fresh
+        sys.stdout.write("\n")
+        sys.stdout.flush()
 
     @property
     def _private_key_path(self) -> str:
@@ -116,7 +209,6 @@ class GuestCapDriver:
         if not self._machine.image.startswith("http"):
             raise ValueError(f"Image is not a URL: {self._machine.image}")
 
-        progress = 0
         LOG.warning("Flashing progress: 0%")
 
         # Set the status to IN_PROGRESS in the Status API
@@ -129,24 +221,9 @@ class GuestCapDriver:
             full_hash=self._gen_hash(),
         )
 
-        def handler(total: int, read: int, written: int, chunk: bytes):
-            nonlocal progress
-            if total == 0:
-                LOG.warning("Flashing progress: %d MiB written", written / 1024**2)
-                return
-            current_progress = int((read / total) * 100)
-            if current_progress > progress:
-                progress = current_progress
-                LOG.warning(
-                    "Flashing progress: %d%%, %d MiB written",
-                    progress,
-                    written / 1024**2,
-                )
-
-        http.stream_to_file(
-            source_url=self._machine.image,
+        self._download_image(
+            image_url=self._machine.image,
             destination_path=DEFAULT_BLOCK_DEVICE,
-            chunk_handler=handler,
         )
         LOG.warning("Flashing progress: 100%")
 
