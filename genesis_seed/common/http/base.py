@@ -26,8 +26,8 @@ import urllib.parse
 import urllib.request
 import zlib
 
-from genesis_seed.common import exceptions
 from genesis_seed.common import constants as c
+from genesis_seed.common import exceptions
 
 LOG = logging.getLogger(__name__)
 

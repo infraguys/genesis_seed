@@ -123,6 +123,7 @@ build_ipxe_bios:
 	cp configurations/IPXE/pcbios.ipxe ipxe/src/
 	cd ipxe/src/ && \
 		make -j${NPROC} bin-x86_64-pcbios/undionly.kpxe EMBED=pcbios.ipxe
+	cp ipxe/src/bin-x86_64-pcbios/undionly.kpxe .
 
 build_ipxe_efi:
 	cp configurations/IPXE/uefi.ipxe ipxe/src/
@@ -142,6 +143,7 @@ build_ipxe_1af41041_core:
 
 clean_ipxe:
 	rm -fr ipxe
+	rm -f undionly.kpxe
 
 # Initramfs part
 initrd: busybox python build_initrd

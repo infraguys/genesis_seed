@@ -170,3 +170,4 @@ busybox
 initrd.img
 initrd/
 ipxe/
+undionly.kpxe

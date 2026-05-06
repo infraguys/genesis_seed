@@ -16,12 +16,12 @@
 import logging
 import uuid as sys_uuid
 
-from genesis_seed.services import basic
-from genesis_seed.common import utils
-from genesis_seed.dm import models
-from genesis_seed.common.orch import core
 from genesis_seed.common import constants as c
+from genesis_seed.common import utils
+from genesis_seed.common.orch import core
+from genesis_seed.dm import models
 from genesis_seed.drivers import guest
+from genesis_seed.services import basic
 
 LOG = logging.getLogger(__name__)
 PAYLOAD_UPDATE_RATE = 60

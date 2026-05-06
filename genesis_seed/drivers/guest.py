@@ -13,19 +13,19 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import logging
 import os
 import random
-import logging
 import subprocess
 import sys
-import urllib.error
 import time
+import urllib.error
 
+from genesis_seed.common import constants as c
 from genesis_seed.common import utils
 from genesis_seed.common.http import base as http
-from genesis_seed.dm import models
 from genesis_seed.common.orch import core
-from genesis_seed.common import constants as c
+from genesis_seed.dm import models
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)

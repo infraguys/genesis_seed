@@ -14,8 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import typing as tp
-import uuid as sys_uuid
 from urllib.parse import urljoin
+import uuid as sys_uuid
 
 from genesis_seed.common.http import base
 from genesis_seed.dm import models
