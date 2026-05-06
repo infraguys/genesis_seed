@@ -19,29 +19,40 @@ env:
 jobs:
   Build:
     runs-on: self-hosted
+    if : ${{ github.actor != 'dependabot[bot]' }}
     strategy:
       fail-fast: true
     steps:
+#      - name: Install deps
+#        run: sudo apt install --yes liblzma-dev bison flex libelf-dev libssl-dev
       - uses: actions/checkout@v4
         with:
           fetch-depth: 30
       - name: Build binaries(Kernel, Busybox, Python, Initrd) on Self-Hosted runner
         run: |
-          make clean && make
-      - name: Install DevTools
-        id: devtools
-        run: |
-          set -eux
-
-          # Install DevTools
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install genesis-devtools
-          VERSION="$(genesis get-version .)"
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          make clean && make && make ipxe
       - name: Upload kernel and initrd to GC repository
         run: |
+          set -eux
+          
+          source ~/.profile
+          VERSION="$(genesis get-version .)"
+          
           curl -X PUT --upload-file ./initrd.img \
-            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/${{ steps.devtools.outputs.VERSION }}/initrd.img
+            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/${VERSION}/initrd.img
           curl -X PUT --upload-file ./vmlinuz \
-            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/${{ steps.devtools.outputs.VERSION }}/vmlinuz
+            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/${VERSION}/vmlinuz
+          curl -X PUT --upload-file ./undionly.kpxe \
+            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/${VERSION}/undionly.kpxe
+
+      - name: Upload to latest on tag
+        if: github.ref_type == 'tag'
+        run: |
+          set -eux
+          
+          curl -X PUT --upload-file ./initrd.img \
+            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/latest/initrd.img
+          curl -X PUT --upload-file ./vmlinuz \
+            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/latest/vmlinuz
+          curl -X PUT --upload-file ./undionly.kpxe \
+            $REPO_ENDPOINT_PUT/${PROJECT_NAME}/latest/undionly.kpxe

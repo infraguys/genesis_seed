@@ -14,15 +14,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 import functools
+import logging
 import typing as tp
 import uuid as sys_uuid
 
-from genesis_seed.dm import models
+from genesis_seed.common import exceptions as base_exc
 from genesis_seed.common.http import base as http
 from genesis_seed.common.http import clients
-from genesis_seed.common import exceptions as base_exc
+from genesis_seed.dm import models
 
 LOG = logging.getLogger(__name__)
 

@@ -13,11 +13,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import logging
 import os
 import subprocess
 import typing as tp
 import uuid as sys_uuid
-import logging
 
 from genesis_seed.common import constants as c
 from genesis_seed.dm import hw_models

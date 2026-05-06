@@ -16,9 +16,9 @@
 
 import logging
 
+from genesis_seed.common import constants as c
 from genesis_seed.common import utils
 from genesis_seed.common.orch import core
-from genesis_seed.common import constants as c
 from genesis_seed.services.agent import SeedOSAgentService
 
 
