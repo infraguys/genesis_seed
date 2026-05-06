@@ -1,4 +1,4 @@
-# Copyright 2025 Genesis Corporation
+# Copyright 2025-2026 Genesis Corporation
 #
 # All Rights Reserved.
 #
@@ -114,7 +114,7 @@ clean_python:
 
 # IPXE part
 
-ipxe: download_ipxe build_ipxe_bios
+ipxe: download_ipxe build_ipxe_bios build_ipxe_1af41041
 
 download_ipxe: clean_ipxe
 	git clone ${IPXE_URL}
@@ -132,9 +132,9 @@ build_ipxe_efi:
 
 build_ipxe_1af41041:
 	cp configurations/IPXE/1af41041.ipxe ipxe/src/
-	cp client.crt client.key ipxe/src/
 	cd ipxe/src/ && \
-		make -j${NPROC} bin/1af41041.rom
+		make -j${NPROC} bin/1af41041.rom EMBED=1af41041.ipxe
+	cp ipxe/src/bin/1af41041.rom .
 
 build_ipxe_1af41041_core:
 	cp configurations/IPXE/1af41041_core.ipxe ipxe/src/
@@ -144,6 +144,7 @@ build_ipxe_1af41041_core:
 clean_ipxe:
 	rm -fr ipxe
 	rm -f undionly.kpxe
+	rm -f 1af41041.rom
 
 # Initramfs part
 initrd: busybox python build_initrd
