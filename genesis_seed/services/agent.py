@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import logging
+import typing as tp
 import uuid as sys_uuid
 
 from genesis_seed.common import constants as c
@@ -26,13 +27,16 @@ from genesis_seed.services import basic
 LOG = logging.getLogger(__name__)
 PAYLOAD_UPDATE_RATE = 60
 
+# Type alias for both client types
+CoreClientType = tp.Union[core.CoreClient, core.AutonomousCoreClient]
+
 
 class SeedOSAgentService(basic.BasicService):
     FINISH_FLAG_PATH = "/seed_os_finished"
 
     def __init__(
         self,
-        core_client: core.CoreClient,
+        core_client: CoreClientType,
         agent_uuid: sys_uuid.UUID | None = None,
         payload_path: str | None = c.AGENT_PAYLOAD_PATH,
         iter_min_period=3,

@@ -35,6 +35,14 @@ AGENT_CAPABILITIES = ("guest_machine",)
 AGENT_FACTS = ()
 AGENT_PAYLOAD_PATH = "/payload.json"
 
+# Autonomous mode constants
+AUTONOMOUS_CMDLINE_KEY = "autonomous"
+AUTONOMOUS_MOUNT_POINT = "/mnt/autonomous"
+AUTONOMOUS_NETPLAN_DIR = f"{AUTONOMOUS_MOUNT_POINT}/netplan"
+AUTONOMOUS_WORK_DIR = "/autonomous"
+AUTONOMOUS_UPDATE_JSON_PATH = os.path.join(AUTONOMOUS_WORK_DIR, "update.json")
+AUTONOMOUS_PRIVATE_KEY_PATH = os.path.join(AUTONOMOUS_WORK_DIR, "private_key")
+
 
 class MachineStatus(str, enum.Enum):
     NEW = "NEW"

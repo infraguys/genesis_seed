@@ -19,6 +19,7 @@ import random
 import subprocess
 import sys
 import time
+import typing as tp
 import urllib.error
 
 from genesis_seed.common import constants as c
@@ -32,6 +33,9 @@ LOG.setLevel(logging.INFO)
 DEFAULT_BLOCK_DEVICE = "/dev/vda"
 KIND = "guest_machine"
 SHA256SUM_SUFFIX = ".SHA256SUM"
+
+# Type alias for both client types
+CoreClientType = tp.Union[core.CoreClient, core.AutonomousCoreClient]
 
 
 def ro_opener(path, flags):
@@ -177,7 +181,7 @@ class GuestCapDriver:
             full_hash=self._gen_hash(),
         )
 
-    def run(self, api: core.CoreClient, payload: models.Payload):
+    def run(self, api: CoreClientType, payload: models.Payload):
         """Flash the guest machine with the image from the payload."""
         if self._is_ready():
             return
@@ -257,4 +261,4 @@ class GuestCapDriver:
         )
 
         self._mark_ready()
-        self._shutdown()
+        self._reboot()

@@ -136,11 +136,6 @@ build_ipxe_1af41041:
 		make -j${NPROC} bin/1af41041.rom EMBED=1af41041.ipxe
 	cp ipxe/src/bin/1af41041.rom .
 
-build_ipxe_1af41041_core:
-	cp configurations/IPXE/1af41041_core.ipxe ipxe/src/
-	cd ipxe/src/ && \
-		make -j${NPROC} bin-x86_64-efi/1af41041.efirom EMBED=1af41041_core.ipxe
-
 clean_ipxe:
 	rm -fr ipxe
 	rm -f undionly.kpxe
