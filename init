@@ -27,17 +27,92 @@ export PYTHONPATH="$PYTHONPATH:/lib/:/lib/python$PYTHON_VER/site-packages/genesi
 export SEED_OS_AGENT="/lib/python$PYTHON_VER/site-packages/genesis_seed/genesis_seed/cmd/agent.py"
 export SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
 
-# Check available interfaces and bring them up
-for iface_path in /sys/class/net/eth*; do
-    # The glob returns the pattern itself if no files match.
-    # This check ensures we only proceed if an interface was actually found.
-    if [ ! -e "$iface_path" ]; then
-        continue
+# Check if running in autonomous mode
+AUTONOMOUS_MODE="0"
+if grep -q "autonomous=1" /proc/cmdline 2>/dev/null; then
+    AUTONOMOUS_MODE="1"
+    echo "Autonomous mode detected"
+fi
+
+# Function to mount data disk
+mount_data_disk() {
+    local mount_point="/mnt/autonomous"
+    mkdir -p "$mount_point"
+
+    # Try common disk partitions (vdb1, sdb1, nvme1n1p1)
+    for disk in /dev/vdb1 /dev/sdb1 /dev/nvme1n1p1 /dev/xvdb1; do
+        if [ -e "$disk" ]; then
+            echo "Trying to mount $disk..."
+            if mount "$disk" "$mount_point" 2>/dev/null; then
+                echo "Successfully mounted $disk at $mount_point"
+                return 0
+            fi
+        fi
+    done
+
+    return 1
+}
+
+# Function to apply netplan configuration from disk
+apply_netplan_from_disk() {
+    local mount_point="/mnt/autonomous"
+    local netplan_dir="$mount_point/netplan"
+
+    if [ ! -d "$netplan_dir" ]; then
+        echo "Netplan directory not found on data disk: $netplan_dir"
+        return 1
     fi
-    iface=$(basename "$iface_path")
-    ifconfig "$iface" up
-    udhcpc -i "$iface" -n -s /bin/ifup.sh
-done
+
+    # Apply netplan configuration using Python script with iproute2
+    echo "Applying netplan configuration using iproute2..."
+    python3 -c "from genesis_seed.cmd.netplan_apply import main; main()"
+
+    return $?
+}
+
+# Function to copy agent working files from mounted disk and unmount
+copy_agent_files_and_umount() {
+    local mount_point="/mnt/autonomous"
+    local work_dir="/autonomous"
+
+    mkdir -p "$work_dir"
+
+    for f in update.json private_key; do
+        if [ -e "$mount_point/$f" ]; then
+            # Use `mv` to cleanup files for the next update
+            mv "$mount_point/$f" "$work_dir/$f"
+            echo "Moved $f to $work_dir"
+        fi
+    done
+
+    umount "$mount_point" && echo "Unmounted $mount_point" || echo "WARNING: Failed to unmount $mount_point"
+}
+
+# Network configuration
+if [ "$AUTONOMOUS_MODE" = "1" ]; then
+    echo "Configuring autonomous mode..."
+
+    # Mount data disk
+    if mount_data_disk; then
+        # Apply netplan configuration from disk (also brings up interfaces)
+        apply_netplan_from_disk
+        # Copy agent working files and unmount the data disk
+        copy_agent_files_and_umount
+    else
+        echo "WARNING: Failed to mount data disk in autonomous mode"
+    fi
+else
+    # Standard mode: use DHCP
+    echo "Configuring standard mode with DHCP..."
+    for iface_path in /sys/class/net/eth*; do
+        if [ ! -e "$iface_path" ]; then
+            continue
+        fi
+        iface=$(basename "$iface_path")
+        ifconfig "$iface" up
+        udhcpc -i "$iface" -n -s /bin/ifup.sh
+    done
+fi
 
 echo "GENESIS SEED OS !!!"
 python3 $SEED_OS_AGENT
