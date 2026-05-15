@@ -22,7 +22,7 @@ mount -t tmpfs     tmpfs     /tmp
 mount -t devtmpfs  devtmpfs  /dev
 
 export PYTHONHOME=/
-export PYTHON_VER="3.10"
+export PYTHON_VER="3.14"
 export PYTHONPATH="$PYTHONPATH:/lib/:/lib/python$PYTHON_VER/site-packages/genesis_seed"
 export SEED_OS_AGENT="/lib/python$PYTHON_VER/site-packages/genesis_seed/genesis_seed/cmd/agent.py"
 export SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
