@@ -26,6 +26,8 @@ import urllib.parse
 import urllib.request
 import zlib
 
+import compression.zstd as zstd
+
 from genesis_seed.common import constants as c
 from genesis_seed.common import exceptions
 
@@ -223,6 +225,35 @@ class GZChunkHandler(BaseChunkHandler):
         super().is_clean()
 
 
+class ZstdChunkHandler(BaseChunkHandler):
+    def __init__(self, content_length: int, chunk_size: int):
+        self.chunk_size = chunk_size
+        self.d = zstd.ZstdDecompressor()
+        super().__init__(content_length=content_length)
+
+    def handle_chunk(self, chunk: bytes, out_file: tp.BinaryIO) -> int:
+        if not chunk:
+            return 0
+        self.in_bytes += len(chunk)
+        tail = chunk
+        written = 0
+        while True:
+            raw_chunk = self.d.decompress(tail, max_length=self.chunk_size)
+            if raw_chunk:
+                out_file.write(raw_chunk)
+                written += len(raw_chunk)
+            if self.d.needs_input or self.d.eof:
+                break
+            tail = b""
+        self.out_bytes += written
+        return written
+
+    def is_clean(self):
+        if not self.d.eof:
+            raise DownloadDecompressError()
+        super().is_clean()
+
+
 def stream_to_file(
     source_url: str,
     destination_path: str,
@@ -250,21 +281,28 @@ def stream_to_file(
 
     req = urllib.request.Request(source_url)
     # It's absurd to compress already compressed file
-    if not source_url.endswith(".gz"):
-        req.add_header("Accept-Encoding", "gzip")
+    if not source_url.endswith(".gz") and not source_url.endswith(".zst"):
+        req.add_header("Accept-Encoding", "zstd, gzip")
     with urllib.request.urlopen(req) as response:
         content_length = int(response.headers.get("Content-Length", 0))
         is_gzipped = response.headers.get(
             "Content-Encoding"
         ) == "gzip" or source_url.endswith(".gz")
+        is_zstd = response.headers.get(
+            "Content-Encoding"
+        ) == "zstd" or source_url.endswith(".zst")
 
-        if is_gzipped:
-            LOG.warning("Got gzipped stream/file, progress will be innacurate...")
+        if is_zstd:
+            LOG.warning("Got zstd stream/file, progress will be inaccurate...")
+            chunker = ZstdChunkHandler(content_length, chunk_size=chunk_size)
+        elif is_gzipped:
+            LOG.warning("Got gzipped stream/file, progress will be inaccurate...")
             chunker = GZChunkHandler(content_length, chunk_size=chunk_size)
         else:
             chunker = PlainChunkHandler(content_length)
 
         with open(destination_path, "wb") as file:
+            chunks_since_sync = 0
             while True:
                 chunk = response.read(chunk_size)
                 read += len(chunk)
@@ -274,6 +312,15 @@ def stream_to_file(
 
                 if not chunk:
                     break
+
+                # Periodically flush page cache to disk to avoid accumulating
+                # gigabytes of dirty pages that cause a large blocking fsync
+                # at the end, which is critical on low-memory VMs.
+                chunks_since_sync += 1
+                if chunks_since_sync >= 64:
+                    file.flush()
+                    os.fsync(file.fileno())
+                    chunks_since_sync = 0
 
                 if chunk_handler is not None:
                     chunk_handler(content_length, read, written, chunk)
@@ -306,16 +353,22 @@ def stream_to_bytes(
     read = written = 0
 
     req = urllib.request.Request(source_url)
-    if not source_url.endswith(".gz"):
-        req.add_header("Accept-Encoding", "gzip")
+    if not source_url.endswith(".gz") and not source_url.endswith(".zst"):
+        req.add_header("Accept-Encoding", "zstd, gzip")
     with urllib.request.urlopen(req) as response:
         content_length = int(response.headers.get("Content-Length", 0))
         is_gzipped = response.headers.get(
             "Content-Encoding"
         ) == "gzip" or source_url.endswith(".gz")
+        is_zstd = response.headers.get(
+            "Content-Encoding"
+        ) == "zstd" or source_url.endswith(".zst")
 
-        if is_gzipped:
-            LOG.warning("Got gzipped stream/file, progress will be innacurate...")
+        if is_zstd:
+            LOG.warning("Got zstd stream/file, progress will be inaccurate...")
+            chunker = ZstdChunkHandler(content_length, chunk_size=chunk_size)
+        elif is_gzipped:
+            LOG.warning("Got gzipped stream/file, progress will be inaccurate...")
             chunker = GZChunkHandler(content_length, chunk_size=chunk_size)
         else:
             chunker = PlainChunkHandler(content_length)

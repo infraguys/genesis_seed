@@ -28,9 +28,8 @@ BUSYBOX_URL="https://www.busybox.net/downloads/binaries/${BUSYBOX_VERSION}-x86_6
 RAMDISK_DIR="initrd"
 RAMDISK_NAME="initrd.img"
 
-# Take Python 3.10 since we don't need the newest features
-# in the Seed OS but it takes significant less space.
-PYTHON_VERSION="3.10.9"
+# Python 3.14 is used for native zstd (compression.zstd) support.
+PYTHON_VERSION="3.14.3"
 PYTHON_PKG_NAME="genesis_seed"
 PYTHON_URL="https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz"
 PYTHON_DIR="$(shell pwd)/Python-${PYTHON_VERSION}"
@@ -94,18 +93,35 @@ download_python: clean_python
 build_python:
 	rm -fr ${PYTHON_OUTPUT_DIR}
 	mkdir ${PYTHON_OUTPUT_DIR}
-# Building with static libraries and no shared libraries
-# Alternative configure paramters are:
-# --disable-shared LDFLAGS="-static" CFLAGS="-static" CPPFLAGS="-static" 
-# but resulting binaries take slightly more space.
+# Building with static libraries and no shared libraries.
+# LINKFORSHARED=" " suppresses -export-dynamic so the linker builds a
+# fully static executable.
+# Setup.local is processed first by makesetup and overrides Setup.stdlib,
+# so our *static* declarations take priority over the default *shared* ones.
 	cd ${PYTHON_DIR} && \
 		./configure \
 			LDFLAGS="-static -static-libgcc" \
-			CPPFLAGS="-fPIC -static" \
+			LINKFORSHARED=" " \
+			LIBZSTD="-l:libzstd.a" \
+			MODULE_BUILDTYPE=static \
 			--disable-shared \
 			--prefix=${PYTHON_OUTPUT_DIR} && \
-		cp ../configurations/python/Setup ${PYTHON_DIR}/Modules/Setup && \
-		make install -j${NPROC} ; \
+		cp ../configurations/python/Setup ${PYTHON_DIR}/Modules/Setup.local && \
+		make -j${NPROC} \
+			Modules/_hacl/libHacl_Hash_MD5.a \
+			Modules/_hacl/libHacl_Hash_SHA1.a \
+			Modules/_hacl/libHacl_Hash_SHA2.a \
+			Modules/_hacl/libHacl_Hash_SHA3.a \
+			Modules/_hacl/libHacl_Hash_BLAKE2.a \
+			Modules/_hacl/libHacl_HMAC.a && \
+		make install -j${NPROC} \
+			MODULE__MD5_LDFLAGS=Modules/_hacl/libHacl_Hash_MD5.a \
+			MODULE__SHA1_LDFLAGS=Modules/_hacl/libHacl_Hash_SHA1.a \
+			MODULE__SHA2_LDFLAGS=Modules/_hacl/libHacl_Hash_SHA2.a \
+			MODULE__SHA3_LDFLAGS=Modules/_hacl/libHacl_Hash_SHA3.a \
+			MODULE__BLAKE2_LDFLAGS=Modules/_hacl/libHacl_Hash_BLAKE2.a \
+			MODULE__HMAC_LDFLAGS=Modules/_hacl/libHacl_HMAC.a \
+			MODULE__ZSTD_LDFLAGS='-l:libzstd.a' ; \
 		cd ..
 
 clean_python:
@@ -158,11 +174,20 @@ build_initrd:
 	./busybox --install ${RAMDISK_DIR}/bin
 # Install Python
 	cp -r ${PYTHON_OUTPUT_DIR}/lib/* ${RAMDISK_DIR}/lib/
-	cp ${PYTHON_OUTPUT_DIR}/bin/python3 ${RAMDISK_DIR}/bin/
+	cp -L ${PYTHON_OUTPUT_DIR}/bin/python3 ${RAMDISK_DIR}/bin/
+# Remove build-only artifacts not needed at runtime
+	rm -f  ${RAMDISK_DIR}/lib/libpython3.14.a
+	rm -rf ${RAMDISK_DIR}/lib/pkgconfig
+	rm -rf ${RAMDISK_DIR}/lib/python3.14/config-3.14-x86_64-linux-gnu
+	rm -rf ${RAMDISK_DIR}/lib/python3.14/test
+	rm -rf ${RAMDISK_DIR}/lib/python3.14/idlelib
+	rm -rf ${RAMDISK_DIR}/lib/python3.14/ensurepip
+	rm -rf ${RAMDISK_DIR}/lib/python3.14/tkinter
+	find ${RAMDISK_DIR}/lib/python3.14 -name '__pycache__' -type d -exec rm -rf {} +
 # Install Python packages
-	mkdir ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}
-	cp -r ${PYTHON_PKG_NAME} ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}/
-	cd ${RAMDISK_DIR}/lib/python3.10/site-packages/${PYTHON_PKG_NAME}/ && \
+	mkdir ${RAMDISK_DIR}/lib/python3.14/site-packages/${PYTHON_PKG_NAME}
+	cp -r ${PYTHON_PKG_NAME} ${RAMDISK_DIR}/lib/python3.14/site-packages/${PYTHON_PKG_NAME}/
+	cd ${RAMDISK_DIR}/lib/python3.14/site-packages/${PYTHON_PKG_NAME}/ && \
 		find . -name '*.py[co]' -delete && \
 		find . -name __pycache__ -type d -exec rm -rf {} +
 # Add CA certificates
@@ -170,7 +195,7 @@ build_initrd:
 	cp /etc/ssl/certs/ca-certificates.crt ${RAMDISK_DIR}/etc/ssl/certs/
 # Build initramfs
 	cd ${RAMDISK_DIR} && \
-		find . | cpio -H newc -o | gzip -9 >../${RAMDISK_NAME}
+		find . | cpio -H newc -o | zstd -19 -T0 >../${RAMDISK_NAME}
 
 clean_initrd:
 	rm -fr ${RAMDISK_DIR}

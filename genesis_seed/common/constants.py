@@ -25,7 +25,21 @@ NODE_UUID_PATH = os.path.join(WORK_DIR, "node-id")
 PRIVATE_KEY_PATH = os.path.join(WORK_DIR, "private_key")
 ROOTFS_MOUNT_PATH = "/mnt/"
 
-CHUNK_SIZE = 16 << 20  # 16Mb
+
+def _chunk_size() -> int:
+    try:
+        with open("/proc/meminfo") as f:
+            for line in f:
+                if line.startswith("MemTotal:"):
+                    total_kb = int(line.split()[1])
+                    size = (total_kb * 1024) // 16
+                    return max(1 << 20, min(size, 16 << 20))
+    except OSError:
+        pass
+    return 4 << 20
+
+
+CHUNK_SIZE = _chunk_size()
 
 KERNEL_CMDLINE_PATH = "/proc/cmdline"
 GC_CMDLINE_DEF_PREFIX = "gc_"
