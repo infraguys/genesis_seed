@@ -19,8 +19,8 @@ import subprocess
 import typing as tp
 import uuid as sys_uuid
 
-from genesis_seed.common import constants as c
-from genesis_seed.dm import hw_models
+from exordos_seed.common import constants as c
+from exordos_seed.dm import hw_models
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)

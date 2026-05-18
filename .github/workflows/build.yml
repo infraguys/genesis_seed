@@ -36,7 +36,7 @@ jobs:
           set -eux
           
           source ~/.profile
-          VERSION="$(genesis get-version .)"
+          VERSION="$(exordos get-version .)"
           
           curl -X PUT --upload-file ./initrd.img \
             $REPO_ENDPOINT_PUT/${PROJECT_NAME}/${VERSION}/initrd.img

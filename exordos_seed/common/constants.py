@@ -17,10 +17,10 @@ import enum
 import os
 import uuid as sys_uuid
 
-GLOBAL_SERVICE_NAME = "genesis_seed"
+GLOBAL_SERVICE_NAME = "exordos_seed"
 SERVICE_PROJECT_ID = sys_uuid.UUID("00000000-0000-0000-0000-000000000000")
 
-WORK_DIR = "/var/lib/genesis"
+WORK_DIR = "/var/lib/exordos"
 NODE_UUID_PATH = os.path.join(WORK_DIR, "node-id")
 PRIVATE_KEY_PATH = os.path.join(WORK_DIR, "private_key")
 ROOTFS_MOUNT_PATH = "/mnt/"

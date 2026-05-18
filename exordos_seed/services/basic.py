@@ -18,7 +18,7 @@ import abc
 import logging
 import time
 
-from genesis_seed.services import base
+from exordos_seed.services import base
 
 LOG = logging.getLogger(__name__)
 

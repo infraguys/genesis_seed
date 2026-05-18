@@ -24,7 +24,7 @@ import subprocess
 import sys
 import typing as tp
 
-from genesis_seed.common import constants as c
+from exordos_seed.common import constants as c
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)

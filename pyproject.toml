@@ -1,6 +1,6 @@
 [project]
-name = "genesis-seed"
-description = "Genesis Seed OS"
+name = "exordos-seed"
+description = "Exordos Seed OS"
 readme = "README.md"
 authors = [{name = "Genesis Corporation", email = "anton.kremenetsky@gmail.com"}]
 dynamic = ["version"]
@@ -21,7 +21,7 @@ classifiers = [
 dependencies = [
 ]
 [project.urls]
-homepage = "https://github.com/infraguys/genesis_seed/"
+homepage = "https://github.com/exordos/exordos_seed/"
 
 [build-system]
 requires = [
@@ -109,7 +109,7 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 
 [tool.ruff.lint.isort]
-known-first-party = ["genesis_seed"]
+known-first-party = ["exordos_seed"]
 combine-as-imports = false
 force-sort-within-sections = true
 order-by-type = true
@@ -120,7 +120,7 @@ force-single-line = true
 where = ["."]
 
 [project.scripts]
-seed-os-agent = "genesis_seed.cmd.agent:main"
+seed-os-agent = "exordos_seed.cmd.agent:main"
 
 [tool.uv]
 package = true
@@ -128,7 +128,7 @@ package = true
 [tool.mypy]
 exclude = [
     '.venv',
-    'genesis_seed/tests',
+    'exordos_seed/tests',
 ]
 python_version = "3.12"
 disallow_untyped_defs = true
@@ -139,16 +139,16 @@ warn_unused_ignores = true
 ignore_missing_imports = true
 
 [tool.setuptools.package-data]
-genesis_seed = ["*.yaml", "*.md"]
+exordos_seed = ["*.yaml", "*.md"]
 
 [tool.coverage.run]
 branch = true
 source = [
-    "genesis_seed"
+    "exordos_seed"
 ]
-command_line = "-m pytest -s genesis_seed/tests/unit"
+command_line = "-m pytest -s exordos_seed/tests/unit"
 omit = [
-    "genesis_seed/tests/*",
+    "exordos_seed/tests/*",
     ".venv",
     "memory:0x"
 ]
