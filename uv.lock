@@ -173,7 +173,7 @@ wheels = [
 ]
 
 [[package]]
-name = "genesis-seed"
+name = "exordos-seed"
 source = { editable = "." }
 
 [package.optional-dependencies]

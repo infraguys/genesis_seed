@@ -23,8 +23,8 @@ mount -t devtmpfs  devtmpfs  /dev
 
 export PYTHONHOME=/
 export PYTHON_VER="3.14"
-export PYTHONPATH="$PYTHONPATH:/lib/:/lib/python$PYTHON_VER/site-packages/genesis_seed"
-export SEED_OS_AGENT="/lib/python$PYTHON_VER/site-packages/genesis_seed/genesis_seed/cmd/agent.py"
+export PYTHONPATH="$PYTHONPATH:/lib/:/lib/python$PYTHON_VER/site-packages/exordos_seed"
+export SEED_OS_AGENT="/lib/python$PYTHON_VER/site-packages/exordos_seed/exordos_seed/cmd/agent.py"
 export SSL_CERT_FILE="/etc/ssl/certs/ca-certificates.crt"
 
 # Check if running in autonomous mode
@@ -65,7 +65,7 @@ apply_netplan_from_disk() {
 
     # Apply netplan configuration using Python script with iproute2
     echo "Applying netplan configuration using iproute2..."
-    python3 -c "from genesis_seed.cmd.netplan_apply import main; main()"
+    python3 -c "from exordos_seed.cmd.netplan_apply import main; main()"
 
     return $?
 }
@@ -114,6 +114,19 @@ else
     done
 fi
 
-echo "GENESIS SEED OS !!!"
+echo -e "███████╗██╗  ██╗ ██████╗ ██████╗ ██████╗  ██████╗ ███████╗"
+echo -e "██╔════╝╚██╗██╔╝██╔═══██╗██╔══██╗██╔══██╗██╔═══██╗██╔════╝"
+echo -e "█████╗   ╚███╔╝ ██║   ██║██████╔╝██║  ██║██║   ██║███████╗"
+echo -e "██╔══╝   ██╔██╗ ██║   ██║██╔══██╗██║  ██║██║   ██║╚════██║"
+echo -e "███████╗██╔╝ ██╗╚██████╔╝██║  ██║██████╔╝╚██████╔╝███████║"
+echo -e "╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═════╝  ╚═════╝ ╚══════╝"
+echo -e "                                                          "
+echo -e "███████╗███████╗███████╗██████╗           ██████╗ ███████╗"
+echo -e "██╔════╝██╔════╝██╔════╝██╔══██╗         ██╔═══██╗██╔════╝"
+echo -e "███████╗█████╗  █████╗  ██║  ██║         ██║   ██║███████╗"
+echo -e "╚════██║██╔══╝  ██╔══╝  ██║  ██║         ██║   ██║╚════██║"
+echo -e "███████║███████╗███████╗██████╔╝         ╚██████╔╝███████║"
+echo -e "╚══════╝╚══════╝╚══════╝╚═════╝           ╚═════╝ ╚══════╝"
+
 python3 $SEED_OS_AGENT
 sh

@@ -17,12 +17,12 @@ import logging
 import typing as tp
 import uuid as sys_uuid
 
-from genesis_seed.common import constants as c
-from genesis_seed.common import utils
-from genesis_seed.common.orch import core
-from genesis_seed.dm import models
-from genesis_seed.drivers import guest
-from genesis_seed.services import basic
+from exordos_seed.common import constants as c
+from exordos_seed.common import utils
+from exordos_seed.common.orch import core
+from exordos_seed.dm import models
+from exordos_seed.drivers import guest
+from exordos_seed.services import basic
 
 LOG = logging.getLogger(__name__)
 PAYLOAD_UPDATE_RATE = 60

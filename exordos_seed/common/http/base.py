@@ -28,8 +28,8 @@ import zlib
 
 import compression.zstd as zstd
 
-from genesis_seed.common import constants as c
-from genesis_seed.common import exceptions
+from exordos_seed.common import constants as c
+from exordos_seed.common import exceptions
 
 LOG = logging.getLogger(__name__)
 

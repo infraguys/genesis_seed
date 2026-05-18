@@ -22,11 +22,11 @@ import time
 import typing as tp
 import urllib.error
 
-from genesis_seed.common import constants as c
-from genesis_seed.common import utils
-from genesis_seed.common.http import base as http
-from genesis_seed.common.orch import core
-from genesis_seed.dm import models
+from exordos_seed.common import constants as c
+from exordos_seed.common import utils
+from exordos_seed.common.http import base as http
+from exordos_seed.common.orch import core
+from exordos_seed.dm import models
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -159,7 +159,7 @@ class GuestCapDriver:
             c.ROOTFS_MOUNT_PATH,
             "var",
             "lib",
-            "genesis",
+            "exordos",
             "universal_agent",
             "private_key",
         )

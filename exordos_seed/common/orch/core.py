@@ -21,11 +21,11 @@ import os
 import typing as tp
 import uuid as sys_uuid
 
-from genesis_seed.common import constants as c
-from genesis_seed.common import exceptions as base_exc
-from genesis_seed.common.http import base as http
-from genesis_seed.common.http import clients
-from genesis_seed.dm import models
+from exordos_seed.common import constants as c
+from exordos_seed.common import exceptions as base_exc
+from exordos_seed.common.http import base as http
+from exordos_seed.common.http import clients
+from exordos_seed.dm import models
 
 LOG = logging.getLogger(__name__)
 

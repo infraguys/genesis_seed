@@ -19,7 +19,7 @@ import os
 import typing as tp
 import uuid as sys_uuid
 
-from genesis_seed.common import utils
+from exordos_seed.common import utils
 
 
 class SimpleViewMixin:
@@ -194,7 +194,7 @@ class Resource(SimpleViewMixin):
         "root_disk_size": 15,
         "cores": 1,
         "ram": 1024,
-        "image": "http://10.20.0.1:8080/genesis-base.raw"
+        "image": "http://10.20.0.1:8080/exordos-base.raw"
     }
     All these fields are considered as target fields and they are used
     to calculate `hash`.
@@ -207,7 +207,7 @@ class Resource(SimpleViewMixin):
         "root_disk_size": 15,
         "cores": 1,
         "ram": 1024,
-        "image": "http://10.20.0.1:8080/genesis-base.raw",
+        "image": "http://10.20.0.1:8080/exordos-base.raw",
 
         // Not target fields below
         "created_at": "2022-01-01T00:00:00+00:00",

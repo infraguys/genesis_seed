@@ -30,7 +30,7 @@ RAMDISK_NAME="initrd.img"
 
 # Python 3.14 is used for native zstd (compression.zstd) support.
 PYTHON_VERSION="3.14.3"
-PYTHON_PKG_NAME="genesis_seed"
+PYTHON_PKG_NAME="exordos_seed"
 PYTHON_URL="https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz"
 PYTHON_DIR="$(shell pwd)/Python-${PYTHON_VERSION}"
 PYTHON_TARBALL="Python-${PYTHON_VERSION}.tar.xz"

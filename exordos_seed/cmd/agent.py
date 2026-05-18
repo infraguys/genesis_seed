@@ -16,10 +16,10 @@
 
 import logging
 
-from genesis_seed.common import constants as c
-from genesis_seed.common import utils
-from genesis_seed.common.orch import core
-from genesis_seed.services.agent import SeedOSAgentService
+from exordos_seed.common import constants as c
+from exordos_seed.common import utils
+from exordos_seed.common.orch import core
+from exordos_seed.services.agent import SeedOSAgentService
 
 
 def _is_autonomous_mode(cfg: dict) -> bool:

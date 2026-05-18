@@ -17,8 +17,8 @@ import typing as tp
 from urllib.parse import urljoin
 import uuid as sys_uuid
 
-from genesis_seed.common.http import base
-from genesis_seed.dm import models
+from exordos_seed.common.http import base
+from exordos_seed.dm import models
 
 
 class BaseModelClient(base.HttpClient):
