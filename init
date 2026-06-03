@@ -21,6 +21,12 @@ mount -t sysfs     sysfs     /sys
 mount -t tmpfs     tmpfs     /tmp
 mount -t devtmpfs  devtmpfs  /dev
 
+# Duplicate all output to serial console (virsh console) while keeping VGA output
+exec 3>&1
+mkfifo /tmp/logpipe
+tee /dev/ttyS0 < /tmp/logpipe >&3 &
+exec > /tmp/logpipe 2>&1
+
 export PYTHONHOME=/
 export PYTHON_VER="3.14"
 export PYTHONPATH="$PYTHONPATH:/lib/:/lib/python$PYTHON_VER/site-packages/exordos_seed"
