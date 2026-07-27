@@ -37,6 +37,11 @@ PYTHON_TARBALL="Python-${PYTHON_VERSION}.tar.xz"
 PYTHON_OUTPUT_DIR="${PYTHON_DIR}/output"
 
 IPXE_URL="https://github.com/ipxe/ipxe.git"
+# Pinned on purpose: the ROM is firmware, and cloning master reships whatever
+# upstream happened to have on build day — which is how a netboot regression
+# arrived once already, with nothing changed on our side and no way to rebuild
+# the artifact that shipped. Bump deliberately, after testing.
+IPXE_REF="3ca799eb269c5df414c74b3ae7465ec726fb6372"
 VIRTIO_ROM_NAME="virtio-net.rom"
 
 # Default target
@@ -156,6 +161,7 @@ ipxe: download_ipxe build_ipxe_bios build_ipxe_virtio
 
 download_ipxe: clean_ipxe
 	git clone ${IPXE_URL}
+	cd ipxe && git checkout ${IPXE_REF}
 
 build_ipxe_bios:
 	cp configurations/IPXE/pcbios.ipxe ipxe/src/
