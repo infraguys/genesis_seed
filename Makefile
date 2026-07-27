@@ -37,6 +37,7 @@ PYTHON_TARBALL="Python-${PYTHON_VERSION}.tar.xz"
 PYTHON_OUTPUT_DIR="${PYTHON_DIR}/output"
 
 IPXE_URL="https://github.com/ipxe/ipxe.git"
+VIRTIO_ROM_NAME="virtio-net.rom"
 
 # Default target
 all: kernel initrd
@@ -136,8 +137,22 @@ clean_python:
 # iPXE cannot map an address it cannot represent, so it binds no NIC and the
 # guest never sends DHCP. undionly.kpxe is built from the same directory, which
 # is why the stock ROM chain never hit this.
+#
+# An iPXE ROM also only drives the PCI ID it was built for; on any other device
+# it runs, binds no NIC and again emits no DHCP. A virtio-net NIC reports one of
+# two IDs depending on the slot it lands in:
+#
+#   1af4:1041  non-transitional — a NIC on a PCIe root port, which is where
+#              libvirt puts it on q35 (QEMU's disable-legacy=auto drops legacy
+#              support on PCIe). This is what exordos_core's guests get.
+#   1af4:1000  transitional — a NIC in a plain PCI slot: i440fx guests, or q35
+#              without a root port. QEMU's own pxe-virtio.rom is this one.
+#
+# Rather than make every consumer figure out which of those its guests have, we
+# ship one ROM holding an image for each: catrom concatenates them into a single
+# multi-image option ROM and the BIOS runs whichever image matches the device.
 
-ipxe: download_ipxe build_ipxe_bios build_ipxe_1af41041
+ipxe: download_ipxe build_ipxe_bios build_ipxe_virtio
 
 download_ipxe: clean_ipxe
 	git clone ${IPXE_URL}
@@ -153,16 +168,18 @@ build_ipxe_efi:
 	cd ipxe/src/ && \
 		make -j${NPROC} bin-x86_64-efi/ipxe.efi EMBED=uefi.ipxe
 
-build_ipxe_1af41041:
-	cp configurations/IPXE/1af41041.ipxe ipxe/src/
+build_ipxe_virtio:
+	cp configurations/IPXE/netboot.ipxe ipxe/src/
 	cd ipxe/src/ && \
-		make -j${NPROC} bin-x86_64-pcbios/1af41041.rom EMBED=1af41041.ipxe
-	cp ipxe/src/bin-x86_64-pcbios/1af41041.rom .
+		make -j${NPROC} bin-x86_64-pcbios/1af41000.rom EMBED=netboot.ipxe && \
+		make -j${NPROC} bin-x86_64-pcbios/1af41041.rom EMBED=netboot.ipxe && \
+		perl util/catrom.pl bin-x86_64-pcbios/1af41000.rom \
+			bin-x86_64-pcbios/1af41041.rom > ../../${VIRTIO_ROM_NAME}
 
 clean_ipxe:
 	rm -fr ipxe
 	rm -f undionly.kpxe
-	rm -f 1af41041.rom
+	rm -f ${VIRTIO_ROM_NAME}
 
 # Initramfs part
 initrd: busybox python build_initrd
@@ -211,5 +228,5 @@ clean_initrd:
 .PHONY: kernel clean build_kernel clean_kernel download_kernel rebuild_kernel \
 	    busybox download_busybox build_busybox clean_busybox \
 	    python download_python build_python clean_python \
-	    ipxe download_ipxe build_ipxe_bios clean_ipxe \
+	    ipxe download_ipxe build_ipxe_bios build_ipxe_virtio clean_ipxe \
 	    clean_initrd build_initrd rebuild_initrd initrd all
