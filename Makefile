@@ -129,6 +129,13 @@ clean_python:
 	rm -f ${PYTHON_TARBALL}
 
 # IPXE part
+#
+# The ROM is built for x86_64 rather than i386 (iPXE's default `bin/` target).
+# Firmware parks a virtio device's 64-bit BAR above 4 GiB as soon as the guest
+# has RAM up there — past 2.75 GiB on q35, 3.5 GiB on i440fx — and a 32-bit
+# iPXE cannot map an address it cannot represent, so it binds no NIC and the
+# guest never sends DHCP. undionly.kpxe is built from the same directory, which
+# is why the stock ROM chain never hit this.
 
 ipxe: download_ipxe build_ipxe_bios build_ipxe_1af41041
 
@@ -149,8 +156,8 @@ build_ipxe_efi:
 build_ipxe_1af41041:
 	cp configurations/IPXE/1af41041.ipxe ipxe/src/
 	cd ipxe/src/ && \
-		make -j${NPROC} bin/1af41041.rom EMBED=1af41041.ipxe
-	cp ipxe/src/bin/1af41041.rom .
+		make -j${NPROC} bin-x86_64-pcbios/1af41041.rom EMBED=1af41041.ipxe
+	cp ipxe/src/bin-x86_64-pcbios/1af41041.rom .
 
 clean_ipxe:
 	rm -fr ipxe
